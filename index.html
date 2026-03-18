@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JENKINS — Infrastructure & AI</title>
+  <meta name="description" content="Brody Jenkins — Infrastructure engineer, AI builder, homelabber.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Poppins:ital,wght@0,300;0,400;0,500;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="is-loading">
+
+  <!-- Preloader -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__circle"></div>
+    <span class="preloader__text">JENKINS</span>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header" id="siteHeader">
+    <div class="container">
+      <a href="#hero" class="site-header__logo">JENKINS</a>
+      <nav class="site-header__nav">
+        <a href="#stack">Stack</a>
+        <a href="#homelab">Homelab</a>
+        <a href="#about">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+  <section class="section-hero" id="hero">
+    <canvas class="star-field" id="starField"></canvas>
+    <div class="container">
+      <div class="section-hero__inner">
+        <div class="section-hero__content">
+          <p class="section-hero__eyebrow">Infrastructure · AI · Builder</p>
+          <h1 class="section-hero__title">
+            <span class="word">BRODY</span>
+            <span class="word accent-outline">JENKINS</span>
+          </h1>
+          <p class="section-hero__desc">
+            Building infrastructure that doesn't apologize for its ambition.
+            <br>152 GB RAM. 24 GB VRAM. Zero cloud dependencies.
+          </p>
+        </div>
+        <div class="section-hero__decoration">
+          <div class="orb">
+            <div class="orb__ring orb__ring--3"></div>
+            <div class="orb__ring orb__ring--2"></div>
+            <div class="orb__ring orb__ring--1"></div>
+            <div class="orb__core"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="section-hero__scroll">
+      <span>Scroll</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ── Stack / Hardware ──────────────────────────────────────────────── -->
+  <section class="section-stack" id="stack">
+    <div class="container">
+      <p class="section-label">Hardware</p>
+      <h2 class="section-title">The Stack</h2>
+      <div class="stack-grid">
+
+        <!-- Server -->
+        <div class="stack-card">
+          <div class="stack-card__header">
+            <span class="stack-card__label">HYPERVISOR</span>
+          </div>
+          <div class="stack-card__name">Dell PowerEdge T430</div>
+          <ul class="stack-card__specs">
+            <li><span>CPU</span><span>2× Xeon E5-2630 v3</span></li>
+            <li><span>RAM</span><span>152 GB DDR4</span></li>
+            <li><span>GPU</span><span>RTX 3060 12 GB</span></li>
+            <li><span>OS</span><span>Proxmox VE</span></li>
+            <li><span>Mgmt</span><span>iDRAC 8</span></li>
+          </ul>
+          <div class="stack-card__services">
+            <span>Jellyfin</span>
+            <span>TrueNAS</span>
+            <span>Open WebUI</span>
+            <span>n8n</span>
+            <span>LiteLLM</span>
+            <span>Portainer</span>
+            <span>Ollama</span>
+          </div>
+        </div>
+
+        <!-- Gaming Rig -->
+        <div class="stack-card">
+          <div class="stack-card__header">
+            <span class="stack-card__label">AI WORKSTATION</span>
+          </div>
+          <div class="stack-card__name">Gaming Rig</div>
+          <ul class="stack-card__specs">
+            <li><span>CPU</span><span>Ryzen 7 3800X</span></li>
+            <li><span>GPU</span><span>RTX 3090 Ti 24 GB</span></li>
+            <li><span>VRAM</span><span>24 GB (+48 planned)</span></li>
+            <li><span>Inference</span><span>LM Studio</span></li>
+          </ul>
+          <div class="stack-card__services">
+            <span>LM Studio</span>
+            <span>ComfyUI</span>
+            <span>Stability Matrix</span>
+          </div>
+        </div>
+
+        <!-- Network -->
+        <div class="stack-card stack-card--network">
+          <div class="stack-card__header">
+            <span class="stack-card__label">NETWORK</span>
+          </div>
+          <div class="stack-card__name">Tailscale Mesh</div>
+          <p class="stack-card__desc">
+            MacBook, server, and gaming rig — every node reachable by hostname from anywhere in the world. No VPN hassle.
+          </p>
+          <div class="stack-card__services" style="margin-top:1.5rem">
+            <span>MacBook</span>
+            <span>T430</span>
+            <span>Gaming PC</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Homelab Live ───────────────────────────────────────────────────── -->
+  <section class="section-homelab" id="homelab">
+    <div class="container">
+      <p class="section-label">Live Status</p>
+      <h2 class="section-title">Homelab</h2>
+
+      <div class="homelab-grid" id="homelabGrid">
+
+        <!-- LM Studio -->
+        <div class="status-card status-card--wide" id="card-lmstudio">
+          <button class="status-card__refresh" onclick="refreshService('lmstudio')" title="Refresh">↻</button>
+          <div class="status-card__header">
+            <div class="status-indicator loading" id="ind-lmstudio"></div>
+            <div class="status-card__name">LM Studio</div>
+          </div>
+          <div class="status-card__detail" id="detail-lmstudio">Connecting…</div>
+          <div class="status-card__endpoint" id="ep-lmstudio">100.71.100.103:1234</div>
+          <div class="model-list" id="models-lmstudio"></div>
+        </div>
+
+        <!-- Ollama -->
+        <div class="status-card" id="card-ollama">
+          <button class="status-card__refresh" onclick="refreshService('ollama')" title="Refresh">↻</button>
+          <div class="status-card__header">
+            <div class="status-indicator loading" id="ind-ollama"></div>
+            <div class="status-card__name">Ollama</div>
+          </div>
+          <div class="status-card__detail" id="detail-ollama">Connecting…</div>
+          <div class="status-card__endpoint" id="ep-ollama">10.201.52.200:11434</div>
+        </div>
+
+        <!-- LiteLLM -->
+        <div class="status-card" id="card-litellm">
+          <button class="status-card__refresh" onclick="refreshService('litellm')" title="Refresh">↻</button>
+          <div class="status-card__header">
+            <div class="status-indicator loading" id="ind-litellm"></div>
+            <div class="status-card__name">LiteLLM</div>
+          </div>
+          <div class="status-card__detail" id="detail-litellm">Connecting…</div>
+          <div class="status-card__endpoint" id="ep-litellm">10.201.52.200:4000</div>
+        </div>
+
+        <!-- Proxmox -->
+        <div class="status-card" id="card-proxmox">
+          <button class="status-card__refresh" onclick="refreshService('proxmox')" title="Refresh">↻</button>
+          <div class="status-card__header">
+            <div class="status-indicator loading" id="ind-proxmox"></div>
+            <div class="status-card__name">Proxmox</div>
+          </div>
+          <div class="status-card__detail" id="detail-proxmox">Not configured</div>
+          <div class="status-card__endpoint" id="ep-proxmox">Click ⚙ to configure</div>
+        </div>
+
+        <!-- TrueNAS -->
+        <div class="status-card" id="card-truenas">
+          <button class="status-card__refresh" onclick="refreshService('truenas')" title="Refresh">↻</button>
+          <div class="status-card__header">
+            <div class="status-indicator loading" id="ind-truenas"></div>
+            <div class="status-card__name">TrueNAS</div>
+          </div>
+          <div class="status-card__detail" id="detail-truenas">Not configured</div>
+          <div class="status-card__endpoint" id="ep-truenas">Click ⚙ to configure</div>
+        </div>
+
+        <!-- Jellyfin -->
+        <div class="status-card" id="card-jellyfin">
+          <button class="status-card__refresh" onclick="refreshService('jellyfin')" title="Refresh">↻</button>
+          <div class="status-card__header">
+            <div class="status-indicator loading" id="ind-jellyfin"></div>
+            <div class="status-card__name">Jellyfin</div>
+          </div>
+          <div class="status-card__detail" id="detail-jellyfin">Not configured</div>
+          <div class="status-card__endpoint" id="ep-jellyfin">Click ⚙ to configure</div>
+        </div>
+
+      </div>
+
+      <div class="homelab-footer">
+        <div class="refresh-info">
+          <div class="refresh-info__dot"></div>
+          <span id="refreshTimer">Refreshing in 30s</span>
+        </div>
+        <button class="config-btn" onclick="openConfig()">⚙ Configure Endpoints</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Config Modal ──────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeConfigIfOverlay(event)">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 class="modal__title">Configure Endpoints</h3>
+        <button class="modal__close" onclick="closeConfig()">✕</button>
+      </div>
+
+      <div class="form-group">
+        <div class="form-group__label">LM Studio</div>
+        <input class="form-input" id="cfg-lmstudio-url" type="text" placeholder="http://100.71.100.103:1234">
+      </div>
+
+      <div class="form-group">
+        <div class="form-group__label">Ollama</div>
+        <input class="form-input" id="cfg-ollama-url" type="text" placeholder="http://10.201.52.200:11434">
+      </div>
+
+      <div class="form-group">
+        <div class="form-group__label">LiteLLM</div>
+        <input class="form-input" id="cfg-litellm-url" type="text" placeholder="http://10.201.52.200:4000">
+      </div>
+
+      <div class="form-group">
+        <div class="form-group__label">Jellyfin</div>
+        <div class="form-row">
+          <input class="form-input" id="cfg-jellyfin-url" type="text" placeholder="http://10.201.52.207:8096">
+          <input class="form-input" id="cfg-jellyfin-apikey" type="password" placeholder="API Key">
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn btn--secondary" onclick="closeConfig()">Cancel</button>
+        <button class="btn btn--primary" onclick="saveConfig()">Save & Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── About ─────────────────────────────────────────────────────────── -->
+  <section class="section-about" id="about">
+    <div class="container">
+      <div class="about-grid">
+
+        <div class="about-content">
+          <p class="section-label">About</p>
+          <h2 class="section-title">Builder at heart.<br>Infrastructure by choice.</h2>
+          <p>
+            <strong>Brody</strong> runs more compute in a bedroom than most small companies keep in a server room. Not because it's necessary — because it's better.
+          </p>
+          <p>
+            Passionate about <strong>local LLM deployment</strong> and owning every layer of the stack. Custom YAML configs, SQLite edits, LXC TUN passthrough, iDRAC management — nothing is too low-level.
+          </p>
+          <p>
+            Deep into AI image generation with <strong>ComfyUI</strong> and Stability Matrix, model library living on TrueNAS across the Tailscale mesh.
+          </p>
+        </div>
+
+        <div class="about-stats">
+          <div class="about-stat">
+            <div class="about-stat__value">152<span class="accent">GB</span></div>
+            <div class="about-stat__label">Server RAM</div>
+          </div>
+          <div class="about-stat">
+            <div class="about-stat__value">24<span class="accent">GB</span></div>
+            <div class="about-stat__label">Local VRAM</div>
+          </div>
+          <div class="about-stat">
+            <div class="about-stat__value">7<span class="accent">+</span></div>
+            <div class="about-stat__label">Self-Hosted Services</div>
+          </div>
+          <div class="about-stat">
+            <div class="about-stat__value">0<span class="accent">%</span></div>
+            <div class="about-stat__label">Cloud Dependency</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <div class="container">
+      <span class="site-footer__copy">JENKINS — At your service.</span>
+      <span class="site-footer__copy" id="footerTime"></span>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
