@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mission Control</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/services.css">
+  <link rel="stylesheet" href="css/docker.css">
+</head>
+<body>
+
+  <!-- Full-screen WebGL canvas sits behind everything at z-index 0 -->
+  <canvas id="three-canvas"></canvas>
+
+  <!--
+    Overlay root: all panels are absolutely-positioned HTML divs.
+    Decision: no CSS3DRenderer. Pointer-events: none unless a child needs
+    interaction (toggled via .interactive class or inline style).
+  -->
+  <div id="overlay-root">
+
+    <!-- Header -->
+    <header id="site-header">
+      <div id="site-title">
+        <span class="title-main">Mission Control</span>
+        <span class="title-sub">Infrastructure Monitor</span>
+      </div>
+
+      <!--
+        Metric labels for the 4 health rings.
+        The 3D rings float in world space at (9, 8, -1); these labels
+        are positioned in the header to the right and serve as legends.
+      -->
+      <div id="rings-labels">
+        <div class="ring-label">
+          <span class="label-value" id="label-queue">&mdash;</span>
+          <span class="label-key">Queued</span>
+        </div>
+        <div class="ring-label">
+          <span class="label-value" id="label-exec">&mdash;</span>
+          <span class="label-key">Exec</span>
+        </div>
+        <div class="ring-label">
+          <span class="label-value" id="label-pass">&mdash;</span>
+          <span class="label-key">Pass</span>
+        </div>
+        <div class="ring-label">
+          <span class="label-value" id="label-active">&mdash;</span>
+          <span class="label-key">Active</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main content area -->
+    <main id="main-content">
+
+      <!--
+        Service status cards — bottom-left quadrant, above the homelab planet.
+        Each card shows service name, status dot, and key metric.
+        Clicking opens the corresponding detail panel.
+        Populated statically; status/metric updated by nodes.js on service-update.
+      -->
+      <div id="service-cards">
+        <div class="svc-card" id="svc-card-lmstudio" data-status="pending" onclick="openPanel('lmstudio')">
+          <div class="svc-card__dot"></div>
+          <span class="svc-card__name">LM Studio</span>
+          <span class="svc-card__metric">--</span>
+        </div>
+        <div class="svc-card" id="svc-card-ollama" data-status="pending" onclick="openPanel('ollama')">
+          <div class="svc-card__dot"></div>
+          <span class="svc-card__name">Ollama</span>
+          <span class="svc-card__metric">--</span>
+        </div>
+        <div class="svc-card" id="svc-card-litellm" data-status="pending" onclick="openPanel('litellm')">
+          <div class="svc-card__dot"></div>
+          <span class="svc-card__name">LiteLLM</span>
+          <span class="svc-card__metric">--</span>
+        </div>
+        <div class="svc-card" id="svc-card-proxmox" data-status="pending" onclick="openPanel('proxmox')">
+          <div class="svc-card__dot"></div>
+          <span class="svc-card__name">Proxmox</span>
+          <span class="svc-card__metric">--</span>
+        </div>
+        <div class="svc-card" id="svc-card-truenas" data-status="pending" onclick="openPanel('truenas')">
+          <div class="svc-card__dot"></div>
+          <span class="svc-card__name">TrueNAS</span>
+          <span class="svc-card__metric">--</span>
+        </div>
+        <div class="svc-card" id="svc-card-jellyfin" data-status="pending" onclick="openPanel('jellyfin')">
+          <div class="svc-card__dot"></div>
+          <span class="svc-card__name">Jellyfin</span>
+          <span class="svc-card__metric">--</span>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Agent pod row placeholder -->
+    <div id="agent-pods"></div>
+
+  </div><!-- /overlay-root -->
+
+  <!-- Docker summary stats (visible on section 2) -->
+  <div id="docker-summary"></div>
+
+  <!-- Edit Groups button (visible on section 2) -->
+  <button id="docker-edit-groups-btn">Edit Groups</button>
+
+  <!--
+    Detail panel overlay backdrop (outside overlay-root so pointer-events work).
+    Clicking the backdrop closes the open panel.
+  -->
+  <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+
+  <!-- LM Studio panel -->
+  <div class="detail-panel" id="panel-lmstudio">
+    <div class="detail-panel__header">
+      <div>
+        <div class="detail-panel__title">LM Studio</div>
+        <div class="detail-panel__subtitle">100.71.100.103:1234</div>
+      </div>
+      <div class="detail-panel__actions">
+        <button class="detail-panel__refresh" onclick="window.loadPanelData && loadPanelData('lmstudio')" title="Refresh">&#8635;</button>
+        <button class="detail-panel__close" onclick="closePanel()">&#10005;</button>
+      </div>
+    </div>
+    <div class="detail-panel__body" id="panel-lmstudio-body"><div class="panel-loading">Loading...</div></div>
+  </div>
+
+  <!-- Ollama panel -->
+  <div class="detail-panel" id="panel-ollama">
+    <div class="detail-panel__header">
+      <div>
+        <div class="detail-panel__title">Ollama</div>
+        <div class="detail-panel__subtitle">10.201.52.200:11434</div>
+      </div>
+      <div class="detail-panel__actions">
+        <button class="detail-panel__refresh" onclick="window.loadPanelData && loadPanelData('ollama')" title="Refresh">&#8635;</button>
+        <button class="detail-panel__close" onclick="closePanel()">&#10005;</button>
+      </div>
+    </div>
+    <div class="detail-panel__body" id="panel-ollama-body"><div class="panel-loading">Loading...</div></div>
+  </div>
+
+  <!-- LiteLLM panel -->
+  <div class="detail-panel" id="panel-litellm">
+    <div class="detail-panel__header">
+      <div>
+        <div class="detail-panel__title">LiteLLM</div>
+        <div class="detail-panel__subtitle">proxy/litellm</div>
+      </div>
+      <div class="detail-panel__actions">
+        <button class="detail-panel__refresh" onclick="window.loadPanelData && loadPanelData('litellm')" title="Refresh">&#8635;</button>
+        <button class="detail-panel__close" onclick="closePanel()">&#10005;</button>
+      </div>
+    </div>
+    <div class="detail-panel__body" id="panel-litellm-body"><div class="panel-loading">Loading...</div></div>
+  </div>
+
+  <!-- Proxmox panel -->
+  <div class="detail-panel" id="panel-proxmox">
+    <div class="detail-panel__header">
+      <div>
+        <div class="detail-panel__title">Proxmox</div>
+        <div class="detail-panel__subtitle">10.201.52.200:8006</div>
+      </div>
+      <div class="detail-panel__actions">
+        <button class="detail-panel__refresh" onclick="window.loadPanelData && loadPanelData('proxmox')" title="Refresh">&#8635;</button>
+        <button class="detail-panel__close" onclick="closePanel()">&#10005;</button>
+      </div>
+    </div>
+    <div class="detail-panel__body" id="panel-proxmox-body"><div class="panel-loading">Loading...</div></div>
+  </div>
+
+  <!-- TrueNAS panel -->
+  <div class="detail-panel" id="panel-truenas">
+    <div class="detail-panel__header">
+      <div>
+        <div class="detail-panel__title">TrueNAS</div>
+        <div class="detail-panel__subtitle">10.201.52.170</div>
+      </div>
+      <div class="detail-panel__actions">
+        <button class="detail-panel__refresh" onclick="window.loadPanelData && loadPanelData('truenas')" title="Refresh">&#8635;</button>
+        <button class="detail-panel__close" onclick="closePanel()">&#10005;</button>
+      </div>
+    </div>
+    <div class="detail-panel__body" id="panel-truenas-body"><div class="panel-loading">Loading...</div></div>
+  </div>
+
+  <!-- Jellyfin panel -->
+  <div class="detail-panel" id="panel-jellyfin">
+    <div class="detail-panel__header">
+      <div>
+        <div class="detail-panel__title">Jellyfin</div>
+        <div class="detail-panel__subtitle">10.201.52.207:8096</div>
+      </div>
+      <div class="detail-panel__actions">
+        <button class="detail-panel__refresh" onclick="window.loadPanelData && loadPanelData('jellyfin')" title="Refresh">&#8635;</button>
+        <button class="detail-panel__close" onclick="closePanel()">&#10005;</button>
+      </div>
+    </div>
+    <div class="detail-panel__body" id="panel-jellyfin-body"><div class="panel-loading">Loading...</div></div>
+  </div>
+
+  <!-- Docker container detail panel -->
+  <div class="detail-panel" id="panel-docker">
+    <div class="detail-panel__header">
+      <div>
+        <div class="detail-panel__title">Container</div>
+        <div class="detail-panel__subtitle">docker</div>
+      </div>
+      <div class="detail-panel__actions">
+        <button class="detail-panel__refresh" onclick="window.openDockerPanel && window.openDockerPanel(window._lastDockerContainerId)" title="Refresh">&#8635;</button>
+        <button class="detail-panel__close" onclick="closePanel()">&#10005;</button>
+      </div>
+    </div>
+    <div class="detail-panel__body" id="panel-docker-body"><div class="panel-loading">Loading...</div></div>
+  </div>
+
+  <!-- Docker group editor modal -->
+  <div class="docker-modal-overlay" id="docker-group-modal">
+    <div class="docker-modal">
+      <div class="docker-modal__header">
+        <span class="docker-modal__title">Container Groups</span>
+        <button class="docker-modal__close" id="group-modal-close">&#10005;</button>
+      </div>
+      <div class="docker-modal__body" id="group-editor-body">
+        <!-- Populated by panels.js -->
+      </div>
+      <div class="docker-modal__footer">
+        <button class="panel-btn" id="group-reset-btn" style="border-color:rgba(255,60,40,0.30);color:rgba(255,80,60,0.70)">Reset to Defaults</button>
+        <button class="panel-btn" id="group-save-btn" style="border-color:rgba(0,200,120,0.35);color:rgba(0,200,120,0.80)">Save Groups</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section title overlay (fades with scroll) -->
+  <div id="section-titles">
+    <div class="section-title" id="section-title-0">Mission Control</div>
+    <div class="section-title" id="section-title-1">Homelab Services</div>
+    <div class="section-title" id="section-title-2">Container Fleet</div>
+  </div>
+
+  <!-- Section navigation dots -->
+  <nav id="section-nav" aria-label="Sections">
+    <button class="section-dot active" data-section="0" aria-label="Section 1"></button>
+    <button class="section-dot" data-section="1" aria-label="Section 2"></button>
+    <button class="section-dot" data-section="2" aria-label="Section 3"></button>
+  </nav>
+
+  <!-- Scroll track: makes body scrollable without content overflow -->
+  <div id="scroll-track"></div>
+
+  <!--
+    ImportMap -- must appear before any module script.
+    All JS modules import 'three' and 'three/addons/' using these bare
+    specifiers; the browser resolves them via this map.
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three":          "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+      "three/addons/":  "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module" src="js/main.js"></script>
+
+</body>
+</html>

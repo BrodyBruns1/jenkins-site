@@ -1,0 +1,279 @@
+/* ── Docker container labels (follow containers in 3D space) ─────────────── */
+.docker-label {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  transform: translate(-50%, -130%);
+  transition: opacity 0.5s ease;
+  z-index: 20;
+}
+.docker-label__name {
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 0 8px currentColor;
+  white-space: nowrap;
+}
+.docker-label__status {
+  font-family: 'Courier New', monospace;
+  font-size: 7px;
+  letter-spacing: 0.10em;
+  color: rgba(255, 255, 255, 0.32);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Status color accents */
+.docker-label[data-state="running"][data-health="healthy"]   .docker-label__name { color: rgba(0, 208, 255, 0.85); }
+.docker-label[data-state="running"][data-health="unhealthy"] .docker-label__name { color: rgba(255, 136, 0, 0.85); }
+.docker-label[data-state="running"][data-health=""]          .docker-label__name { color: rgba(0, 255, 136, 0.85); }
+.docker-label[data-state="exited"]  .docker-label__name { color: rgba(255, 60, 40, 0.70); }
+.docker-label[data-state="paused"]  .docker-label__name { color: rgba(255, 255, 0, 0.70); }
+.docker-label[data-state="created"] .docker-label__name { color: rgba(160, 160, 160, 0.60); }
+
+/* Dot under label */
+.docker-label::after {
+  content: '';
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 5px currentColor;
+  margin-top: 1px;
+}
+
+/* ── Docker container detail panel body ──────────────────────────────────── */
+.docker-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.docker-actions .panel-btn {
+  flex: 1;
+  text-align: center;
+  padding: 6px 10px;
+}
+.docker-actions .panel-btn--start  { border-color: rgba(0, 200, 100, 0.35); color: rgba(0, 200, 100, 0.80); }
+.docker-actions .panel-btn--stop   { border-color: rgba(255, 60, 40, 0.35); color: rgba(255, 60, 40, 0.80); }
+.docker-actions .panel-btn--restart{ border-color: rgba(255, 180, 40, 0.35); color: rgba(255, 180, 40, 0.80); }
+.docker-actions .panel-btn--start:hover:not(:disabled)  { background: rgba(0, 200, 100, 0.15); }
+.docker-actions .panel-btn--stop:hover:not(:disabled)    { background: rgba(255, 60, 40, 0.15); }
+.docker-actions .panel-btn--restart:hover:not(:disabled) { background: rgba(255, 180, 40, 0.15); }
+
+.docker-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+}
+.docker-detail-row:last-child { border-bottom: none; }
+.docker-detail-key {
+  color: rgba(255, 255, 255, 0.32);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+.docker-detail-val {
+  color: rgba(255, 255, 255, 0.72);
+  text-align: right;
+  word-break: break-all;
+  max-width: 280px;
+}
+
+/* ── Group editor modal ──────────────────────────────────────────────────── */
+.docker-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.70);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.docker-modal-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.docker-modal {
+  background: rgba(8, 6, 20, 0.98);
+  border: 1px solid rgba(0, 180, 220, 0.18);
+  border-radius: 6px;
+  width: 480px;
+  max-width: 94vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.60);
+}
+
+.docker-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.docker-modal__title {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(0, 200, 240, 0.80);
+}
+.docker-modal__close {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 3px;
+  color: rgba(255,255,255,0.50);
+  cursor: pointer;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+}
+.docker-modal__close:hover { color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.30); }
+
+.docker-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,180,220,0.25) transparent;
+}
+
+.docker-modal__footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 20px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 8px;
+}
+
+/* Group editor table */
+.group-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Courier New', monospace;
+}
+.group-table th {
+  text-align: left;
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  padding: 0 8px 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.group-table td {
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 9px;
+  color: rgba(255,255,255,0.72);
+  vertical-align: middle;
+}
+.group-table select {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 3px;
+  color: rgba(255,255,255,0.75);
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  padding: 3px 6px;
+  cursor: pointer;
+  outline: none;
+}
+.group-table select:focus { border-color: rgba(0,180,220,0.50); }
+
+/* New group input row */
+.group-add-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.group-add-row input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 3px;
+  color: rgba(255,255,255,0.80);
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  padding: 5px 8px;
+  outline: none;
+}
+.group-add-row input::placeholder { color: rgba(255,255,255,0.20); }
+.group-add-row input:focus { border-color: rgba(0,180,220,0.45); }
+
+/* ── Edit Groups floating button ─────────────────────────────────────────── */
+#docker-edit-groups-btn {
+  position: fixed;
+  bottom: 70px;
+  left: 24px;
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 180, 220, 0.20);
+  border-radius: 4px;
+  color: rgba(0, 200, 240, 0.65);
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.4s ease, border-color 0.2s, color 0.2s;
+}
+#docker-edit-groups-btn:hover {
+  border-color: rgba(0, 180, 220, 0.45);
+  color: rgba(0, 200, 240, 0.90);
+}
+#docker-edit-groups-btn.visible { opacity: 1; }
+
+/* ── Docker status summary (bottom-left, section 3) ──────────────────────── */
+#docker-summary {
+  position: fixed;
+  bottom: 56px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 14;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+#docker-summary.visible { opacity: 1; }
+
+.docker-summary__stat {
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.38);
+  text-transform: uppercase;
+}
+.docker-summary__stat strong {
+  color: rgba(0, 200, 240, 0.75);
+  font-weight: 700;
+  font-size: 12px;
+  margin-right: 4px;
+}

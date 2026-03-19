@@ -1,0 +1,197 @@
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { background: #000; }
+body { width: 100%; min-height: 100vh; background: #000; }
+
+/* ── Canvas: full-screen WebGL background ─────────────────────────────────
+   All overlay elements stack above it. Never set pointer-events on the
+   canvas — it stays at the bottom of the z-order.                         */
+#three-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width:  100% !important;
+  height: 100% !important;
+}
+
+/* ── Overlay layer ─────────────────────────────────────────────────────────
+   Decision: no CSS3DRenderer. All overlay panels are HTML divs with
+   pointer-events: none (pass clicks through to canvas) unless explicitly
+   interactive.                                                             */
+#overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+#site-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 32px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Site title */
+#site-title {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.title-main {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.92);
+  text-transform: uppercase;
+}
+.title-sub {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: rgba(80,190,255,0.55);
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+/* ── Metric labels (upper-right, sit near the 3D health rings) ─────────── */
+#rings-labels {
+  display: flex;
+  gap: 22px;
+  margin-left: auto;
+  align-items: center;
+}
+.ring-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 44px;
+}
+.label-value {
+  font-family: 'Courier New', monospace;
+  font-size: 19px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(80,180,255,0.6);
+}
+.label-key {
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.20em;
+  color: rgba(80,180,255,0.45);
+  text-transform: uppercase;
+}
+
+/* ── Connection status — bottom-right ─────────────────────────────────── */
+#connection-status {
+  position: absolute;
+  bottom: 16px;
+  right: 24px;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+#jenkins-status { color: rgba(255,255,255,0.22); }
+#jenkins-status[data-state="ok"]    { color: rgba(0, 220, 120, 0.65); }
+#jenkins-status[data-state="error"] { color: rgba(255,  70,  50, 0.75); }
+
+/* ── Main content area ───────────────────────────────────────────────────
+   Future phase components (Pipeline Galaxy, Timeline, Agent Pods) mount
+   here. Pointer-events enabled so panels are interactive.                 */
+#main-content {
+  position: absolute;
+  top: 64px; left: 0; right: 0; bottom: 0;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+/* ── Agent pod placeholder (Phase 2) ─────────────────────────────────────
+   Agent pod panels are absolutely-positioned divs, NOT CSS3DRenderer.
+   They sit above the canvas and below future modal panels.
+   (Shown here as a design note; populated by js/agents.js in Phase 2.)    */
+#agent-pods {
+  position: absolute;
+  bottom: 48px; left: 24px; right: 24px;
+  display: flex;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(80,180,255,0.3); border-radius: 2px; }
+
+
+/* -- Scroll-track and section navigation ----------------------------------- */
+
+#scroll-track {
+  height: 300vh;
+  width: 1px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+#section-titles {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
+  pointer-events: none;
+  height: 1.4em;
+}
+
+.section-title {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  position: absolute;
+  white-space: nowrap;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#section-title-0 { opacity: 1; }
+
+#section-nav {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.section-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.25s, transform 0.25s;
+}
+
+.section-dot:hover  { background: rgba(255, 255, 255, 0.45); }
+.section-dot.active { background: rgba(255, 255, 255, 0.80); transform: scale(1.4); }

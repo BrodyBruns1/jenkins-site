@@ -1265,3 +1265,6 @@ a { color: inherit; text-decoration: none; }
   color: rgba(240,237,232,0.45);
   transform: translateX(2px);
 }
+
+/* Three.js planet canvas */
+#planetCanvas { width:100%; height:100%; display:block; }

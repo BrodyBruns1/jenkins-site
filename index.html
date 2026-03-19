@@ -3,389 +3,522 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JENKINS — Infrastructure & AI</title>
-  <meta name="description" content="Brody Jenkins — Infrastructure engineer, AI builder, homelabber.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Poppins:ital,wght@0,300;0,400;0,500;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <title>Initializing...</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #000; }
+    canvas { display: block; }
+    #overlay {
+      position: fixed; inset: 0; background: #000;
+      pointer-events: none; z-index: 10;
+      transition: opacity 0.9s ease-out;
+    }
+    #whiteout {
+      position: fixed; inset: 0; background: #fff;
+      pointer-events: none; z-index: 11; opacity: 0;
+      transition: opacity 0.65s ease-in;
+    }
+    #skip {
+      position: fixed; bottom: 24px; right: 24px; z-index: 20;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.38);
+      padding: 8px 18px; font-family: 'Courier New', monospace;
+      font-size: 11px; letter-spacing: 0.14em; cursor: pointer;
+      border-radius: 3px; transition: all 0.25s; text-transform: uppercase;
+    }
+    #skip:hover {
+      background: rgba(255,255,255,0.13); color: rgba(255,255,255,0.75);
+      border-color: rgba(100,220,255,0.4);
+    }
+  </style>
 </head>
-<body class="is-loading">
+<body>
+<div id="overlay"></div>
+<div id="whiteout"></div>
+<button id="skip">Skip</button>
 
-  <!-- Preloader -->
-  <div class="preloader" id="preloader">
-    <div class="preloader__circle"></div>
-    <span class="preloader__text">JENKINS</span>
-  </div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+  }
+}
+</script>
 
-  <!-- Header -->
-  <header class="site-header" id="siteHeader">
-    <div class="container">
-      <a href="#hero" class="site-header__logo">JENKINS</a>
-      <nav class="site-header__nav">
-        <a href="#stack">Stack</a>
-        <a href="#homelab">Homelab</a>
-        <a href="#about">About</a>
-      </nav>
-    </div>
-  </header>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js';
 
-  <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-  <section class="section-hero" id="hero">
-    <canvas class="star-field" id="starField"></canvas>
-    <div class="container">
-      <div class="section-hero__inner">
-        <div class="section-hero__content">
-          <p class="section-hero__eyebrow">Infrastructure · AI · Builder</p>
-          <h1 class="section-hero__title">
-            <span class="word">BRODY</span>
-            <span class="word accent-outline">JENKINS</span>
-          </h1>
-          <p class="section-hero__desc">
-            Building infrastructure that doesn't apologize for its ambition.
-            <br>152 GB RAM. 24 GB VRAM. Zero cloud dependencies.
-          </p>
-        </div>
-        <div class="section-hero__decoration">
-          <div class="orb">
-            <div class="orb__ring orb__ring--3"></div>
-            <div class="orb__ring orb__ring--2"></div>
-            <div class="orb__ring orb__ring--1"></div>
-            <div class="orb__core"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="section-hero__scroll">
-      <span>Scroll</span>
-      <div class="scroll-arrow"></div>
-    </div>
-  </section>
+// CONFIG -- change JENKINS_URL to wherever the dashboard lives
+const JENKINS_URL    = window.location.origin + '/dashboard.html';
+const INTRO_DURATION = 4.2;
+const FADE_DURATION  = 0.65;
 
-  <!-- ── Stack / Hardware ──────────────────────────────────────────────── -->
-  <section class="section-stack" id="stack">
-    <div class="container">
-      <p class="section-label">Hardware</p>
-      <h2 class="section-title">The Stack</h2>
-      <div class="stack-grid">
+// Redirect logic
+let redirectFired = false;
+function triggerRedirect() {
+  if (redirectFired) return;
+  redirectFired = true;
+  const wo = document.getElementById('whiteout');
+  wo.style.opacity = '1';
+  wo.style.pointerEvents = 'all';
+  setTimeout(() => window.location.replace(JENKINS_URL), FADE_DURATION * 1000 + 80);
+}
+document.getElementById('skip').addEventListener('click', triggerRedirect);
 
-        <!-- Server -->
-        <div class="stack-card">
-          <div class="stack-card__header">
-            <span class="stack-card__label">HYPERVISOR</span>
-          </div>
-          <div class="stack-card__name">Dell PowerEdge T430</div>
-          <ul class="stack-card__specs">
-            <li><span>CPU</span><span>2× Xeon E5-2630 v3</span></li>
-            <li><span>RAM</span><span>152 GB DDR4</span></li>
-            <li><span>GPU</span><span>RTX 3060 12 GB</span></li>
-            <li><span>OS</span><span>Proxmox VE</span></li>
-            <li><span>Mgmt</span><span>iDRAC 8</span></li>
-          </ul>
-          <div class="stack-card__services">
-            <span>Jellyfin</span>
-            <span>TrueNAS</span>
-            <span>Open WebUI</span>
-            <span>n8n</span>
-            <span>LiteLLM</span>
-            <span>Portainer</span>
-            <span>Ollama</span>
-          </div>
-        </div>
+// Renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
 
-        <!-- Gaming Rig -->
-        <div class="stack-card">
-          <div class="stack-card__header">
-            <span class="stack-card__label">AI WORKSTATION</span>
-          </div>
-          <div class="stack-card__name">Gaming Rig</div>
-          <ul class="stack-card__specs">
-            <li><span>CPU</span><span>Ryzen 7 3800X</span></li>
-            <li><span>GPU</span><span>RTX 3090 Ti 24 GB</span></li>
-            <li><span>VRAM</span><span>24 GB (+48 planned)</span></li>
-            <li><span>Inference</span><span>LM Studio</span></li>
-          </ul>
-          <div class="stack-card__services">
-            <span>LM Studio</span>
-            <span>ComfyUI</span>
-            <span>Stability Matrix</span>
-          </div>
-        </div>
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.z = 55;
+const clock = new THREE.Clock();
 
-        <!-- Network -->
-        <div class="stack-card stack-card--network">
-          <div class="stack-card__header">
-            <span class="stack-card__label">NETWORK</span>
-          </div>
-          <div class="stack-card__name">Tailscale Mesh</div>
-          <p class="stack-card__desc">
-            MacBook, server, and gaming rig — every node reachable by hostname from anywhere in the world. No VPN hassle.
-          </p>
-          <div class="stack-card__services" style="margin-top:1.5rem">
-            <span>MacBook</span>
-            <span>T430</span>
-            <span>Gaming PC</span>
-          </div>
-        </div>
+// ============================================================
+// 1. BACKGROUND -- inverted sphere with rainbow star field
+// ============================================================
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  depthWrite: false,
+  uniforms: { uTime: { value: 0.0 } },
+  vertexShader: `
+    varying vec3 vDir;
+    void main() {
+      vDir = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    varying vec3 vDir;
 
-      </div>
-    </div>
-  </section>
+    float hash(float n) { return fract(sin(n) * 43758.5453); }
+    float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-  <!-- ── Homelab Live ───────────────────────────────────────────────────── -->
-  <section class="section-homelab" id="homelab">
-    <div class="container">
-      <p class="section-label">Live Status</p>
-      <h2 class="section-title">Homelab</h2>
+    vec3 hsl2rgb(float h, float s, float l) {
+      float c = (1.0 - abs(2.0*l - 1.0)) * s;
+      float x = c * (1.0 - abs(mod(h*6.0, 2.0) - 1.0));
+      float m = l - c*0.5;
+      vec3 rgb;
+      if      (h < 0.1667) rgb = vec3(c,x,0);
+      else if (h < 0.3333) rgb = vec3(x,c,0);
+      else if (h < 0.5000) rgb = vec3(0,c,x);
+      else if (h < 0.6667) rgb = vec3(0,x,c);
+      else if (h < 0.8333) rgb = vec3(x,0,c);
+      else                 rgb = vec3(c,0,x);
+      return rgb + m;
+    }
 
-      <div class="homelab-grid" id="homelabGrid">
+    // Returns (starBrightness, starHue) for a given direction + density layer
+    vec2 starLayer(vec3 dir, float density) {
+      vec2 uv = vec2(atan(dir.x, dir.z), asin(clamp(dir.y,-0.9999,0.9999)));
+      uv *= density / 3.14159265;
+      vec2 cell = floor(uv);
+      vec2 f    = fract(uv);
 
-        <!-- LM Studio -->
-        <div class="status-card status-card--wide" id="card-lmstudio">
-          <button class="status-card__refresh" onclick="refreshService('lmstudio')" title="Refresh">↻</button>
-          <div class="status-card__header">
-            <div class="status-indicator loading" id="ind-lmstudio"></div>
-            <div class="status-card__name">LM Studio</div>
-          </div>
-          <div class="status-card__detail" id="detail-lmstudio">Connecting…</div>
-          <div class="status-card__endpoint" id="ep-lmstudio">100.71.100.103:1234</div>
-          <div class="model-list" id="models-lmstudio"></div>
-        </div>
+      float h   = hash2(cell);
+      float h2  = hash2(cell + vec2(3.1, 7.4));
+      float h3  = hash2(cell + vec2(1.7, 2.9));
 
-        <!-- Ollama -->
-        <div class="status-card" id="card-ollama">
-          <button class="status-card__refresh" onclick="refreshService('ollama')" title="Refresh">↻</button>
-          <div class="status-card__header">
-            <div class="status-indicator loading" id="ind-ollama"></div>
-            <div class="status-card__name">Ollama</div>
-          </div>
-          <div class="status-card__detail" id="detail-ollama">Connecting…</div>
-          <div class="status-card__endpoint" id="ep-ollama">10.201.52.200:11434</div>
-        </div>
+      // Star position within cell
+      vec2 sp = vec2(hash2(cell + 0.1), hash2(cell + 0.2));
+      float d = length(f - sp);
 
-        <!-- LiteLLM -->
-        <div class="status-card" id="card-litellm">
-          <button class="status-card__refresh" onclick="refreshService('litellm')" title="Refresh">↻</button>
-          <div class="status-card__header">
-            <div class="status-indicator loading" id="ind-litellm"></div>
-            <div class="status-card__name">LiteLLM</div>
-          </div>
-          <div class="status-card__detail" id="detail-litellm">Connecting…</div>
-          <div class="status-card__endpoint" id="ep-litellm">10.201.52.200:4000</div>
-        </div>
+      // Twinkle: slow and gentle
+      float tw = 0.7 + 0.3 * sin(uTime * (0.8 + h * 2.5) + h * 6.283);
 
-        <!-- Proxmox -->
-        <div class="status-card" id="card-proxmox">
-          <button class="status-card__refresh" onclick="refreshService('proxmox')" title="Refresh">↻</button>
-          <div class="status-card__header">
-            <div class="status-indicator loading" id="ind-proxmox"></div>
-            <div class="status-card__name">Proxmox</div>
-          </div>
-          <div class="status-card__detail" id="detail-proxmox">Not configured</div>
-          <div class="status-card__endpoint" id="ep-proxmox">Click ⚙ to configure</div>
-        </div>
+      // Size: most stars tiny, a few larger
+      float size = mix(0.04, 0.12, h * h);
+      float bright = smoothstep(size, 0.0, d) * tw;
 
-        <!-- TrueNAS -->
-        <div class="status-card" id="card-truenas">
-          <button class="status-card__refresh" onclick="refreshService('truenas')" title="Refresh">↻</button>
-          <div class="status-card__header">
-            <div class="status-indicator loading" id="ind-truenas"></div>
-            <div class="status-card__name">TrueNAS</div>
-          </div>
-          <div class="status-card__detail" id="detail-truenas">Not configured</div>
-          <div class="status-card__endpoint" id="ep-truenas">Click ⚙ to configure</div>
-        </div>
+      // Hue: biased toward blue-white but full rainbow scattered in
+      // h2 < 0.6 -> near-white/blue stars (more common)
+      // h2 >= 0.6 -> colorful stars (less common)
+      float hue = mix(
+        0.55 + h3 * 0.15,  // blue-cyan range (most stars)
+        h3,                // full rainbow (some stars)
+        step(0.6, h2)
+      );
 
-        <!-- Jellyfin -->
-        <div class="status-card" id="card-jellyfin">
-          <button class="status-card__refresh" onclick="refreshService('jellyfin')" title="Refresh">↻</button>
-          <div class="status-card__header">
-            <div class="status-indicator loading" id="ind-jellyfin"></div>
-            <div class="status-card__name">Jellyfin</div>
-          </div>
-          <div class="status-card__detail" id="detail-jellyfin">Not configured</div>
-          <div class="status-card__endpoint" id="ep-jellyfin">Click ⚙ to configure</div>
-        </div>
+      return vec2(bright, hue);
+    }
 
-      </div>
+    void main() {
+      vec3 dir = normalize(vDir);
 
-      <div class="homelab-footer">
-        <div class="refresh-info">
-          <div class="refresh-info__dot"></div>
-          <span id="refreshTimer">Refreshing in 30s</span>
-        </div>
-        <button class="config-btn" onclick="openConfig()">⚙ Configure Endpoints</button>
-      </div>
-    </div>
-  </section>
+      // Deep space -- very dark, subtle blue-indigo gradient
+      float y = abs(dir.y);
+      vec3 spaceCol = mix(
+        vec3(0.0, 0.004, 0.018),
+        vec3(0.0, 0.0,   0.006),
+        y
+      );
 
-  <!-- ── Config Modal ──────────────────────────────────────────────────── -->
-  <div class="modal-overlay" id="modalOverlay" onclick="closeConfigIfOverlay(event)">
-    <div class="modal">
-      <div class="modal__header">
-        <h3 class="modal__title">Configure Endpoints</h3>
-        <button class="modal__close" onclick="closeConfig()">✕</button>
-      </div>
+      // Four density layers for depth
+      vec2 s1 = starLayer(dir,  65.0);
+      vec2 s2 = starLayer(dir, 160.0);
+      vec2 s3 = starLayer(dir, 320.0);
+      vec2 s4 = starLayer(dir, 600.0);
 
-      <div class="form-group">
-        <div class="form-group__label">LM Studio</div>
-        <input class="form-input" id="cfg-lmstudio-url" type="text" placeholder="http://100.71.100.103:1234">
-      </div>
+      // Weighted brightness (fainter than before)
+      float b1 = s1.x * 0.55;
+      float b2 = s2.x * 0.38;
+      float b3 = s3.x * 0.26;
+      float b4 = s4.x * 0.16;
 
-      <div class="form-group">
-        <div class="form-group__label">Ollama</div>
-        <input class="form-input" id="cfg-ollama-url" type="text" placeholder="http://10.201.52.200:11434">
-      </div>
+      // Near-white core for brighter stars; tinted for dimmer ones
+      vec3 white = vec3(0.92, 0.96, 1.0);
+      vec3 c1 = mix(hsl2rgb(s1.y, 0.85, 0.65), white, 0.4);
+      vec3 c2 = mix(hsl2rgb(s2.y, 0.80, 0.60), white, 0.3);
+      vec3 c3 = mix(hsl2rgb(s3.y, 0.75, 0.55), white, 0.2);
+      vec3 c4 = mix(hsl2rgb(s4.y, 0.70, 0.50), white, 0.1);
 
-      <div class="form-group">
-        <div class="form-group__label">LiteLLM</div>
-        <input class="form-input" id="cfg-litellm-url" type="text" placeholder="http://10.201.52.200:4000">
-      </div>
+      vec3 starCol = c1*b1 + c2*b2 + c3*b3 + c4*b4;
 
-      <div class="form-group">
-        <div class="form-group__label">Jellyfin</div>
-        <div class="form-row">
-          <input class="form-input" id="cfg-jellyfin-url" type="text" placeholder="http://10.201.52.207:8096">
-          <input class="form-input" id="cfg-jellyfin-apikey" type="password" placeholder="API Key">
-        </div>
-      </div>
+      gl_FragColor = vec4(spaceCol + starCol, 1.0);
+    }
+  `
+});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(280, 32, 32), skyMat));
 
-      <div class="modal__actions">
-        <button class="btn btn--secondary" onclick="closeConfig()">Cancel</button>
-        <button class="btn btn--primary" onclick="saveConfig()">Save & Refresh</button>
-      </div>
-    </div>
-  </div>
+// ============================================================
+// 2. CENTRAL TORUS KNOT -- holographic iridescent
+// ============================================================
+const torusMat = new THREE.ShaderMaterial({
+  side: THREE.DoubleSide,
+  uniforms: { uTime: { value: 0.0 } },
+  vertexShader: `
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vWorldPos;
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      vec3 pos = position;
+      float d = sin(pos.x*4.0 + uTime)
+              * sin(pos.y*3.0 + uTime*0.71)
+              * sin(pos.z*5.0 + uTime*1.33)
+              * 0.19;
+      pos += normal * d;
+      vNormal   = normalize(normalMatrix * normal);
+      vWorldPos = (modelMatrix * vec4(pos,1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vWorldPos;
+    varying vec2 vUv;
 
-  <!-- ── About ─────────────────────────────────────────────────────────── -->
-  <section class="section-about" id="about">
-    <div class="container">
-      <div class="about-grid">
+    vec3 hsl2rgb(float h, float s, float l) {
+      float c = (1.0 - abs(2.0*l - 1.0)) * s;
+      float x = c * (1.0 - abs(mod(h*6.0, 2.0) - 1.0));
+      float m = l - c*0.5;
+      vec3 rgb;
+      if      (h < 0.1667) rgb = vec3(c,x,0);
+      else if (h < 0.3333) rgb = vec3(x,c,0);
+      else if (h < 0.5000) rgb = vec3(0,c,x);
+      else if (h < 0.6667) rgb = vec3(0,x,c);
+      else if (h < 0.8333) rgb = vec3(x,0,c);
+      else                 rgb = vec3(c,0,x);
+      return rgb + m;
+    }
 
-        <div class="about-content">
-          <p class="section-label">About</p>
-          <h2 class="section-title">Builder at heart.<br>Infrastructure by choice.</h2>
-          <p>
-            <strong>Brody</strong> runs more compute in a bedroom than most small companies keep in a server room. Not because it's necessary — because it's better.
-          </p>
-          <p>
-            Passionate about <strong>local LLM deployment</strong> and owning every layer of the stack. Custom YAML configs, SQLite edits, LXC TUN passthrough, iDRAC management — nothing is too low-level.
-          </p>
-          <p>
-            Deep into AI image generation with <strong>ComfyUI</strong> and Stability Matrix, model library living on TrueNAS across the Tailscale mesh.
-          </p>
-        </div>
+    void main() {
+      vec3 viewDir = normalize(cameraPosition - vWorldPos);
+      float fresnel = dot(viewDir, vNormal);
+      float hue  = fract(fresnel*2.1 + uTime*0.085 + vUv.x*0.35);
+      vec3 iri   = hsl2rgb(hue, 1.0, 0.52);
+      float rim  = pow(1.0 - abs(fresnel), 3.8);
+      vec3 rimC  = vec3(0.25, 0.85, 1.0) * rim * 2.2;
+      float scan = smoothstep(0.62, 1.0, sin(vUv.y*90.0 + uTime*2.5)*0.5+0.5) * 0.14;
+      gl_FragColor = vec4(vec3(0.02,0.04,0.09) + iri*0.82 + rimC + vec3(0.15,0.9,1.0)*scan, 1.0);
+    }
+  `
+});
+const torusKnot = new THREE.Mesh(
+  new THREE.TorusKnotGeometry(1.65, 0.58, 200, 26, 2, 3),
+  torusMat
+);
+scene.add(torusKnot);
 
-        <div class="about-stats">
-          <div class="about-stat">
-            <div class="about-stat__value">152<span class="accent">GB</span></div>
-            <div class="about-stat__label">Server RAM</div>
-          </div>
-          <div class="about-stat">
-            <div class="about-stat__value">24<span class="accent">GB</span></div>
-            <div class="about-stat__label">Local VRAM</div>
-          </div>
-          <div class="about-stat">
-            <div class="about-stat__value">7<span class="accent">+</span></div>
-            <div class="about-stat__label">Self-Hosted Services</div>
-          </div>
-          <div class="about-stat">
-            <div class="about-stat__value">0<span class="accent">%</span></div>
-            <div class="about-stat__label">Cloud Dependency</div>
-          </div>
-        </div>
+// ============================================================
+// 3. PARTICLES -- 60k, galaxy spiral, custom shader
+// ============================================================
+const PC = 60000;
+const pPos   = new Float32Array(PC * 3);
+const pSz    = new Float32Array(PC);
+const pPh    = new Float32Array(PC);
+const pCol   = new Float32Array(PC * 3);
+{
+  const c = new THREE.Color();
+  for (let i = 0; i < PC; i++) {
+    const i3 = i * 3;
+    const arm = Math.floor(Math.random() * 3);
+    const t   = Math.pow(Math.random(), 0.55) * 30.0;
+    const ang = t * 0.34 + arm * (Math.PI * 2 / 3);
+    const spr = (0.5 + t * 0.07) * (Math.random() - 0.5);
+    if (Math.random() < 0.72) {
+      pPos[i3]     = Math.cos(ang)*t + spr*Math.cos(ang+Math.PI*0.5);
+      pPos[i3+1]   = (Math.random()-0.5)*(0.9+t*0.04);
+      pPos[i3+2]   = Math.sin(ang)*t + spr*Math.sin(ang+Math.PI*0.5);
+    } else {
+      const r = 3.0+Math.random()*24.0, th=Math.random()*Math.PI*2, ph=Math.acos(2.0*Math.random()-1.0);
+      pPos[i3]=r*Math.sin(ph)*Math.cos(th); pPos[i3+1]=r*Math.cos(ph)*0.28; pPos[i3+2]=r*Math.sin(ph)*Math.sin(th);
+    }
+    pSz[i] = 0.5 + Math.random()*2.6;
+    pPh[i] = Math.random()*Math.PI*2;
+    const dist = Math.sqrt(pPos[i3]**2+pPos[i3+2]**2);
+    c.setHSL(0.54+(Math.random()-0.5)*0.16, 0.88-dist*0.015, 0.65+Math.random()*0.32);
+    pCol[i3]=c.r; pCol[i3+1]=c.g; pCol[i3+2]=c.b;
+  }
+}
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+pGeo.setAttribute('aSize',    new THREE.BufferAttribute(pSz,  1));
+pGeo.setAttribute('aPhase',   new THREE.BufferAttribute(pPh,  1));
+pGeo.setAttribute('aColor',   new THREE.BufferAttribute(pCol, 3));
 
-      </div>
-    </div>
-  </section>
+const pMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0.0 } },
+  transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  vertexShader: `
+    uniform float uTime;
+    attribute float aSize;
+    attribute float aPhase;
+    attribute vec3  aColor;
+    varying vec3  vColor;
+    varying float vAlpha;
+    void main() {
+      vec3 pos = position;
+      // Drift in world space
+      pos.y += sin(uTime*0.28 + aPhase) * 0.42;
+      pos.x += cos(uTime*0.19 + aPhase*1.37) * 0.22;
+      vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
+      float sz = aSize * (360.0 / -mvPos.z);
+      gl_PointSize = clamp(sz, 0.4, 8.5);
+      gl_Position  = projectionMatrix * mvPos;
+      float df = clamp((-mvPos.z - 1.5) / 24.0, 0.0, 1.0);
+      vAlpha = df * (0.48 + 0.52*sin(uTime*0.75+aPhase));
+      vColor = aColor;
+    }
+  `,
+  fragmentShader: `
+    varying vec3  vColor;
+    varying float vAlpha;
+    void main() {
+      float d = length(gl_PointCoord - 0.5) * 2.0;
+      float a = (1.0 - smoothstep(0.25, 1.0, d)) * vAlpha;
+      if (a < 0.004) discard;
+      float glo = exp(-d*3.8)*0.55;
+      gl_FragColor = vec4(vColor + glo, a);
+    }
+  `
+});
+const pSystem = new THREE.Points(pGeo, pMat);
+pSystem.rotation.x = 0.16;
+scene.add(pSystem);
 
-  <!-- ── Footer ────────────────────────────────────────────────────────── -->
-  <footer class="site-footer">
-    <div class="container">
-      <span class="site-footer__copy">JENKINS — At your service.</span>
-      <span class="site-footer__copy" id="footerTime"></span>
-    </div>
-  </footer>
+// ============================================================
+// 4. DATA NODES -- 14 icosahedra, solid + wireframe
+// ============================================================
+const NC = 14;
+const nodes     = [];
+const nodeOrbit = [];
+const nColors = [0x00ffcc,0x0088ff,0x44ffff,0xff44aa,0x8844ff,0x00ff88,0x4488ff,
+                 0xff8800,0x00ccff,0xff00cc,0x44ff44,0xff4444,0x8800ff,0x00eeff];
+for (let i = 0; i < NC; i++) {
+  const r=0.14+Math.random()*0.46, oR=3.8+Math.random()*5.8;
+  const sp=0.16+Math.random()*0.38, ph=Math.random()*Math.PI*2, ti=(Math.random()-0.5)*0.9;
+  const col = nColors[i];
+  const geo = new THREE.IcosahedronGeometry(r, 1);
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:0.55 })));
+  const wm = new THREE.LineSegments(new THREE.EdgesGeometry(geo),
+    new THREE.LineBasicMaterial({ color:col, transparent:true, opacity:0.88 }));
+  wm.scale.setScalar(1.06);
+  g.add(wm);
+  scene.add(g);
+  nodes.push(g);
+  nodeOrbit.push({ oR, sp, ph, ti });
+}
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script src="app.js"></script>
+// ============================================================
+// 5. ENERGY BEAMS
+// ============================================================
+function nPos(i, t) {
+  const { oR, sp, ph, ti } = nodeOrbit[i];
+  const a = t*sp+ph;
+  return new THREE.Vector3(
+    Math.cos(a)*oR + Math.sin(a*0.47)*oR*0.25,
+    Math.sin(t*sp*0.6+ph+ti)*oR*0.3,
+    Math.sin(a)*oR
+  );
+}
+const bPairs = [];
+for (let a=0; a<NC; a++) for (let b=a+1; b<NC; b++)
+  if (nPos(a,0).distanceTo(nPos(b,0)) < 9.0) bPairs.push([a,b]);
 
+const bPos = new Float32Array(bPairs.length*6);
+const bIdx = new Float32Array(bPairs.length*2);
+for (let i=0; i<bPairs.length*2; i++) bIdx[i]=Math.floor(i/2);
 
-<!-- ── Panel Overlay ── -->
-<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+const bGeo = new THREE.BufferGeometry();
+bGeo.setAttribute('position',   new THREE.BufferAttribute(bPos,3).setUsage(THREE.DynamicDrawUsage));
+bGeo.setAttribute('aBeamIndex', new THREE.BufferAttribute(bIdx,1));
+const bMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value:0.0 } },
+  transparent:true, blending:THREE.AdditiveBlending, depthWrite:false,
+  vertexShader: `
+    attribute float aBeamIndex;
+    varying float vIdx;
+    void main() { vIdx=aBeamIndex; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }
+  `,
+  fragmentShader: `
+    uniform float uTime;
+    varying float vIdx;
+    void main() {
+      float pulse = sin(uTime*2.2 + vIdx*1.88)*0.5+0.5;
+      gl_FragColor = vec4(0.08, 0.76, 1.0, pulse*0.52);
+    }
+  `
+});
+scene.add(new THREE.LineSegments(bGeo, bMat));
 
-<!-- ── LM Studio Panel ── -->
-<div class="detail-panel" id="panel-lmstudio">
-  <div class="detail-panel__header">
-    <div><div class="detail-panel__title">LM Studio</div><div class="detail-panel__subtitle">100.71.100.103:1234</div></div>
-    <div class="detail-panel__actions">
-      <button class="detail-panel__refresh" onclick="loadPanelData('lmstudio')" title="Refresh">↻</button>
-      <button class="detail-panel__close" onclick="closePanel()">✕</button>
-    </div>
-  </div>
-  <div class="detail-panel__body" id="panel-lmstudio-body"><div class="panel-loading">Loading…</div></div>
-</div>
+// ============================================================
+// POST-PROCESSING -- all inline, no external shader imports
+// ============================================================
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
 
-<!-- ── Ollama Panel ── -->
-<div class="detail-panel" id="panel-ollama">
-  <div class="detail-panel__header">
-    <div><div class="detail-panel__title">Ollama</div><div class="detail-panel__subtitle">10.201.52.200:11434</div></div>
-    <div class="detail-panel__actions">
-      <button class="detail-panel__refresh" onclick="loadPanelData('ollama')" title="Refresh">↻</button>
-      <button class="detail-panel__close" onclick="closePanel()">✕</button>
-    </div>
-  </div>
-  <div class="detail-panel__body" id="panel-ollama-body"><div class="panel-loading">Loading…</div></div>
-</div>
+// Bloom
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  1.5, 0.4, 0.0
+);
+composer.addPass(bloomPass);
 
-<!-- ── Proxmox Panel ── -->
-<div class="detail-panel" id="panel-proxmox">
-  <div class="detail-panel__header">
-    <div><div class="detail-panel__title">Proxmox</div><div class="detail-panel__subtitle">10.201.52.200:8006</div></div>
-    <div class="detail-panel__actions">
-      <button class="detail-panel__refresh" onclick="loadPanelData('proxmox')" title="Refresh">↻</button>
-      <button class="detail-panel__close" onclick="closePanel()">✕</button>
-    </div>
-  </div>
-  <div class="detail-panel__body" id="panel-proxmox-body"><div class="panel-loading">Loading…</div></div>
-</div>
+// Chromatic aberration (inline)
+composer.addPass(new ShaderPass({
+  uniforms: { tDiffuse: { value:null }, uAmount: { value:0.004 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uAmount; varying vec2 vUv;
+    void main(){
+      vec2 d=vUv-0.5; float l=length(d);
+      float r=texture2D(tDiffuse,vUv-d*uAmount*l).r;
+      float g=texture2D(tDiffuse,vUv).g;
+      float b=texture2D(tDiffuse,vUv+d*uAmount*l).b;
+      gl_FragColor=vec4(r,g,b,1.0);
+    }
+  `
+}));
 
-<!-- ── TrueNAS Panel ── -->
-<div class="detail-panel" id="panel-truenas">
-  <div class="detail-panel__header">
-    <div><div class="detail-panel__title">TrueNAS</div><div class="detail-panel__subtitle">10.201.52.170</div></div>
-    <div class="detail-panel__actions">
-      <button class="detail-panel__refresh" onclick="loadPanelData('truenas')" title="Refresh">↻</button>
-      <button class="detail-panel__close" onclick="closePanel()">✕</button>
-    </div>
-  </div>
-  <div class="detail-panel__body" id="panel-truenas-body"><div class="panel-loading">Loading…</div></div>
-</div>
+// Film grain (inline)
+const grainPass = new ShaderPass({
+  uniforms: { tDiffuse:{value:null}, uTime:{value:0.0}, uIntensity:{value:0.03} },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uTime; uniform float uIntensity; varying vec2 vUv;
+    float rand(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453+uTime); }
+    void main(){
+      vec4 col=texture2D(tDiffuse,vUv);
+      col.rgb += (rand(vUv)*2.0-1.0)*uIntensity;
+      gl_FragColor=col;
+    }
+  `
+});
+composer.addPass(grainPass);
 
-<!-- ── Jellyfin Panel ── -->
-<div class="detail-panel" id="panel-jellyfin">
-  <div class="detail-panel__header">
-    <div><div class="detail-panel__title">Jellyfin</div><div class="detail-panel__subtitle">10.201.52.207:8096</div></div>
-    <div class="detail-panel__actions">
-      <button class="detail-panel__refresh" onclick="loadPanelData('jellyfin')" title="Refresh">↻</button>
-      <button class="detail-panel__close" onclick="closePanel()">✕</button>
-    </div>
-  </div>
-  <div class="detail-panel__body" id="panel-jellyfin-body"><div class="panel-loading">Loading…</div></div>
-</div>
+// Vignette (inline)
+composer.addPass(new ShaderPass({
+  uniforms: { tDiffuse:{value:null}, uOffset:{value:0.95}, uDarkness:{value:1.45} },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uOffset; uniform float uDarkness; varying vec2 vUv;
+    void main(){
+      vec4 col=texture2D(tDiffuse,vUv);
+      float d=length(vUv-0.5)*uOffset;
+      col.rgb *= clamp(1.0 - uDarkness*d*d, 0.0, 1.0);
+      gl_FragColor=col;
+    }
+  `
+}));
 
-<!-- ── LiteLLM Panel ── -->
-<div class="detail-panel" id="panel-litellm">
-  <div class="detail-panel__header">
-    <div><div class="detail-panel__title">LiteLLM</div><div class="detail-panel__subtitle">100.111.121.128:4000</div></div>
-    <div class="detail-panel__actions">
-      <button class="detail-panel__refresh" onclick="loadPanelData('litellm')" title="Refresh">↻</button>
-      <button class="detail-panel__close" onclick="closePanel()">✕</button>
-    </div>
-  </div>
-  <div class="detail-panel__body" id="panel-litellm-body"><div class="panel-loading">Loading…</div></div>
-</div>
+// Fade in
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  document.getElementById('overlay').style.opacity = '0';
+}));
 
+// Resize
+window.addEventListener('resize', () => {
+  const w=window.innerWidth, h=window.innerHeight;
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  composer.setSize(w,h);
+  bloomPass.resolution.set(w,h);
+});
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  const delta   = clock.getDelta();
+  const elapsed = clock.getElapsedTime();
+
+  // Camera pull-in ease-out cubic over 3.5s: z 55->12
+  const cp   = Math.min(elapsed / 3.5, 1.0);
+  const ease = 1.0 - Math.pow(1.0 - cp, 3.0);
+  camera.position.z = THREE.MathUtils.lerp(55.0, 12.0, ease);
+
+  skyMat.uniforms.uTime.value    = elapsed;
+  torusMat.uniforms.uTime.value  = elapsed;
+  pMat.uniforms.uTime.value      = elapsed;
+  bMat.uniforms.uTime.value      = elapsed;
+  grainPass.uniforms.uTime.value = elapsed;
+
+  torusKnot.rotation.x += delta * 0.17;
+  torusKnot.rotation.y += delta * 0.27;
+  torusKnot.rotation.z += delta * 0.06;
+  pSystem.rotation.y   += delta * 0.017;
+
+  for (let i=0; i<NC; i++) {
+    const { oR, sp, ph, ti } = nodeOrbit[i];
+    const a = elapsed*sp+ph;
+    nodes[i].position.set(
+      Math.cos(a)*oR + Math.sin(a*0.47)*oR*0.25,
+      Math.sin(elapsed*sp*0.6+ph+ti)*oR*0.3,
+      Math.sin(a)*oR
+    );
+    nodes[i].rotation.x += delta*sp*0.68;
+    nodes[i].rotation.y += delta*sp*1.05;
+  }
+
+  const ba = bGeo.attributes.position;
+  for (let i=0; i<bPairs.length; i++) {
+    const [a,b]=bPairs[i];
+    const pa=nodes[a].position, pb=nodes[b].position;
+    const vi=i*6;
+    ba.array[vi]=pa.x;   ba.array[vi+1]=pa.y; ba.array[vi+2]=pa.z;
+    ba.array[vi+3]=pb.x; ba.array[vi+4]=pb.y; ba.array[vi+5]=pb.z;
+  }
+  ba.needsUpdate = true;
+
+  if (!redirectFired && elapsed >= INTRO_DURATION) triggerRedirect();
+
+  composer.render();
+}
+animate();
+</script>
 </body>
 </html>
