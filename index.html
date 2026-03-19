@@ -311,5 +311,81 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="app.js"></script>
 
+
+<!-- ── Panel Overlay ── -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+
+<!-- ── LM Studio Panel ── -->
+<div class="detail-panel" id="panel-lmstudio">
+  <div class="detail-panel__header">
+    <div><div class="detail-panel__title">LM Studio</div><div class="detail-panel__subtitle">100.71.100.103:1234</div></div>
+    <div class="detail-panel__actions">
+      <button class="detail-panel__refresh" onclick="loadPanelData('lmstudio')" title="Refresh">↻</button>
+      <button class="detail-panel__close" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="detail-panel__body" id="panel-lmstudio-body"><div class="panel-loading">Loading…</div></div>
+</div>
+
+<!-- ── Ollama Panel ── -->
+<div class="detail-panel" id="panel-ollama">
+  <div class="detail-panel__header">
+    <div><div class="detail-panel__title">Ollama</div><div class="detail-panel__subtitle">10.201.52.200:11434</div></div>
+    <div class="detail-panel__actions">
+      <button class="detail-panel__refresh" onclick="loadPanelData('ollama')" title="Refresh">↻</button>
+      <button class="detail-panel__close" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="detail-panel__body" id="panel-ollama-body"><div class="panel-loading">Loading…</div></div>
+</div>
+
+<!-- ── Proxmox Panel ── -->
+<div class="detail-panel" id="panel-proxmox">
+  <div class="detail-panel__header">
+    <div><div class="detail-panel__title">Proxmox</div><div class="detail-panel__subtitle">10.201.52.200:8006</div></div>
+    <div class="detail-panel__actions">
+      <button class="detail-panel__refresh" onclick="loadPanelData('proxmox')" title="Refresh">↻</button>
+      <button class="detail-panel__close" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="detail-panel__body" id="panel-proxmox-body"><div class="panel-loading">Loading…</div></div>
+</div>
+
+<!-- ── TrueNAS Panel ── -->
+<div class="detail-panel" id="panel-truenas">
+  <div class="detail-panel__header">
+    <div><div class="detail-panel__title">TrueNAS</div><div class="detail-panel__subtitle">10.201.52.170</div></div>
+    <div class="detail-panel__actions">
+      <button class="detail-panel__refresh" onclick="loadPanelData('truenas')" title="Refresh">↻</button>
+      <button class="detail-panel__close" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="detail-panel__body" id="panel-truenas-body"><div class="panel-loading">Loading…</div></div>
+</div>
+
+<!-- ── Jellyfin Panel ── -->
+<div class="detail-panel" id="panel-jellyfin">
+  <div class="detail-panel__header">
+    <div><div class="detail-panel__title">Jellyfin</div><div class="detail-panel__subtitle">10.201.52.207:8096</div></div>
+    <div class="detail-panel__actions">
+      <button class="detail-panel__refresh" onclick="loadPanelData('jellyfin')" title="Refresh">↻</button>
+      <button class="detail-panel__close" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="detail-panel__body" id="panel-jellyfin-body"><div class="panel-loading">Loading…</div></div>
+</div>
+
+<!-- ── LiteLLM Panel ── -->
+<div class="detail-panel" id="panel-litellm">
+  <div class="detail-panel__header">
+    <div><div class="detail-panel__title">LiteLLM</div><div class="detail-panel__subtitle">100.111.121.128:4000</div></div>
+    <div class="detail-panel__actions">
+      <button class="detail-panel__refresh" onclick="loadPanelData('litellm')" title="Refresh">↻</button>
+      <button class="detail-panel__close" onclick="closePanel()">✕</button>
+    </div>
+  </div>
+  <div class="detail-panel__body" id="panel-litellm-body"><div class="panel-loading">Loading…</div></div>
+</div>
+
 </body>
 </html>
