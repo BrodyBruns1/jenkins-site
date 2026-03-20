@@ -120,6 +120,7 @@ const FRAG = /* glsl */`
 export class ParticleReactor {
   constructor(scene) {
     this._elapsed = 0;
+    this._visible = true;
 
     // Uniforms shared with the shader
     this._u = {
@@ -212,9 +213,15 @@ export class ParticleReactor {
     this._u.uMouse.value.set(ndcX, ndcY);
   }
 
+  setVisible(visible) {
+    this._visible = !!visible;
+    if (this._points) this._points.visible = this._visible;
+  }
+
   /** Called every frame by main.js */
   update(elapsed) {
     this._elapsed        = elapsed;
     this._u.uTime.value  = elapsed;
+    if (this._points) this._points.visible = this._visible;
   }
 }

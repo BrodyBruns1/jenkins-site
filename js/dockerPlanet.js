@@ -58,6 +58,7 @@ export class DockerPlanet {
   constructor(scene, camera) {
     this._scene  = scene;
     this._camera = camera;
+    this._fade   = 1.0;
 
     this._group = new THREE.Group();
     this._group.position.set(11.5, -5.0, -2.0);
@@ -72,6 +73,10 @@ export class DockerPlanet {
     this._subscribe();
   }
 
+  setFade(fade) {
+    this._fade = THREE.MathUtils.clamp(fade, 0, 1);
+  }
+
   // ── Planet ─────────────────────────────────────────────────────────────
 
   _buildPlanet() {
@@ -82,6 +87,8 @@ export class DockerPlanet {
       emissive:  new THREE.Color(0x0a2838).multiplyScalar(0.30),
       roughness: 0.72,
       metalness: 0.12,
+      transparent: true,
+      opacity: 1.0,
     });
     this._sphere = new THREE.Mesh(geo, mat);
     this._group.add(this._sphere);
@@ -161,7 +168,7 @@ export class DockerPlanet {
         // Box
         const boxGeo = new THREE.BoxGeometry(0.14, 0.14, 0.14);
         const boxMat = new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity: alive ? 0.78 : 0.30,
+          color, transparent: true, opacity: alive ? 0.78 : 0.52,
         });
         const mesh = new THREE.Mesh(boxGeo, boxMat);
         mesh.renderOrder = 3;
@@ -170,7 +177,7 @@ export class DockerPlanet {
         // Wire shell
         const wireGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(0.18, 0.18, 0.18));
         const wireMat = new THREE.LineBasicMaterial({
-          color, transparent: true, opacity: alive ? 0.50 : 0.18,
+          color, transparent: true, opacity: alive ? 0.50 : 0.24,
         });
         const wire = new THREE.LineSegments(wireGeo, wireMat);
         wire.renderOrder = 3;
@@ -278,11 +285,17 @@ export class DockerPlanet {
   update(elapsed, delta) {
     // Planet rotation
     this._sphere.rotation.y = elapsed * 0.035;
+    this._sphere.material.opacity = this._fade;
+    if (this._group.children[1]) this._group.children[1].material.opacity = 0.09 * this._fade;
 
     // Network ring wobble
+    for (let i = 0; i < this._orbitTrails.length; i++) {
+      this._orbitTrails[i].mesh.material.opacity = 0.07 * this._fade;
+    }
     for (let i = 0; i < this._netRings.length; i++) {
       const r = this._netRings[i];
       r.tiltGroup.rotation.z = r.baseTiltZ + Math.sin(elapsed * 0.16 + i * 0.9) * 0.015;
+      r.mesh.material.opacity = 0.16 * this._fade;
     }
 
     // Container orbits
@@ -317,6 +330,9 @@ export class DockerPlanet {
       n.beamLine.material.opacity = n.alive
         ? 0.08 + 0.14 * (0.5 + 0.5 * Math.sin(elapsed * 1.1 + n.angle))
         : 0.04;
+      n.mesh.material.opacity = (n.alive ? 0.78 : 0.52) * this._fade;
+      n.wire.material.opacity = (n.alive ? 0.50 : 0.24) * this._fade;
+      n.beamLine.material.opacity *= this._fade;
 
       // Label
       if (this._camera) this._updateLabel(n, x, y, z);
@@ -339,10 +355,10 @@ export class DockerPlanet {
       return;
     }
 
-    node.label.style.opacity  = node.alive ? '0.88' : '0.35';
+    node.label.style.opacity  = String((node.alive ? 0.90 : 0.74) * this._fade);
     node.label.style.left     = `${px}px`;
     node.label.style.top      = `${py}px`;
-    node.label.style.pointerEvents = 'auto';
+    node.label.style.pointerEvents = this._fade > 0.08 ? 'auto' : 'none';
   }
 
   get position() { return this._group.position; }

@@ -77,6 +77,7 @@ export class HealthRings {
   constructor(scene) {
     this._rings = [];
     this._group = new THREE.Group();
+    this._fade = 1.0;
     // Upper-right quadrant; z slightly negative for natural depth cue
     this._group.position.set(9.0, 8.0, -1.0);
     scene.add(this._group);
@@ -120,6 +121,10 @@ export class HealthRings {
   }
   _setColor(i, r, g, b) {
     this._rings[i].material.uniforms.uColor.value.set(r, g, b);
+  }
+
+  setFade(fade) {
+    this._fade = THREE.MathUtils.clamp(fade, 0, 1);
   }
 
   // ── Event subscriptions ───────────────────────────────────────────────────
@@ -166,7 +171,7 @@ export class HealthRings {
       const u = ring.material.uniforms;
       u.uTime.value = elapsed;
       // Fade rings in over first 2 s
-      u.uDimAlpha.value = Math.min(elapsed / 2.0, 1.0);
+      u.uDimAlpha.value = Math.min(elapsed / 2.0, 1.0) * this._fade;
     }
   }
 

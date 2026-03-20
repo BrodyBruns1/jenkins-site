@@ -5,12 +5,18 @@
   flex-direction: column;
   align-items: center;
   gap: 1px;
+  padding: 6px 8px 7px;
   pointer-events: auto;
   cursor: pointer;
   user-select: none;
   transform: translate(-50%, -130%);
   transition: opacity 0.5s ease;
   z-index: 20;
+  border-radius: 10px;
+  background: rgba(4, 12, 18, 0.60);
+  border: 1px solid rgba(0, 200, 240, 0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .docker-label__name {
   font-family: 'Courier New', monospace;
@@ -19,14 +25,14 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.82);
-  text-shadow: 0 0 8px currentColor;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.60);
   white-space: nowrap;
 }
 .docker-label__status {
   font-family: 'Courier New', monospace;
   font-size: 7px;
   letter-spacing: 0.10em;
-  color: rgba(255, 255, 255, 0.32);
+  color: rgba(255, 255, 255, 0.56);
   white-space: nowrap;
   text-transform: uppercase;
 }
@@ -35,8 +41,8 @@
 .docker-label[data-state="running"][data-health="healthy"]   .docker-label__name { color: rgba(0, 208, 255, 0.85); }
 .docker-label[data-state="running"][data-health="unhealthy"] .docker-label__name { color: rgba(255, 136, 0, 0.85); }
 .docker-label[data-state="running"][data-health=""]          .docker-label__name { color: rgba(0, 255, 136, 0.85); }
-.docker-label[data-state="exited"]  .docker-label__name { color: rgba(255, 60, 40, 0.70); }
-.docker-label[data-state="paused"]  .docker-label__name { color: rgba(255, 255, 0, 0.70); }
+.docker-label[data-state="exited"]  .docker-label__name { color: rgba(255, 84, 66, 0.86); }
+.docker-label[data-state="paused"]  .docker-label__name { color: rgba(255, 255, 80, 0.82); }
 .docker-label[data-state="created"] .docker-label__name { color: rgba(160, 160, 160, 0.60); }
 
 /* Dot under label */

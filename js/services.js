@@ -147,6 +147,53 @@ export function monoCell(text, maxW) {
   return `<span style="font-family:'Courier New',monospace;font-size:0.7rem;display:block;max-width:${maxW || 200}px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${text}">${text}</span>`;
 }
 
+export async function fetchProxmoxSnapshot() {
+  const PROXY = SERVICES_CONFIG.proxmox.proxyBase;
+  const [statusRes, qemuRes, lxcRes] = await Promise.allSettled([
+    fetch(`${PROXY}/nodes/proxmox/status`, { signal: AbortSignal.timeout(7000) }),
+    fetch(`${PROXY}/nodes/proxmox/qemu`,   { signal: AbortSignal.timeout(7000) }),
+    fetch(`${PROXY}/nodes/proxmox/lxc`,    { signal: AbortSignal.timeout(7000) }),
+  ]);
+
+  const nodeStatus = statusRes.status === 'fulfilled' && statusRes.value.ok
+    ? (await statusRes.value.json()).data
+    : null;
+  const qemus = qemuRes.status === 'fulfilled' && qemuRes.value.ok
+    ? (await qemuRes.value.json()).data || []
+    : [];
+  const lxcs = lxcRes.status === 'fulfilled' && lxcRes.value.ok
+    ? (await lxcRes.value.json()).data || []
+    : [];
+  const resources = [
+    ...qemus.map(vm => ({ ...vm, _type: 'vm' })),
+    ...lxcs.map(ct => ({ ...ct, _type: 'lxc' })),
+  ].sort((a, b) => a.vmid - b.vmid);
+
+  if (!nodeStatus && resources.length === 0) {
+    throw new Error('Unable to load Proxmox data');
+  }
+
+  return { nodeStatus, qemus, lxcs, resources };
+}
+
+export async function proxmoxAction(resourceType, vmid, action) {
+  const PROXY = SERVICES_CONFIG.proxmox.proxyBase;
+  const kind = resourceType === 'lxc' ? 'lxc' : 'qemu';
+  const proxmoxActionName = action === 'restart'
+    ? 'reboot'
+    : action === 'stop'
+      ? 'shutdown'
+      : action;
+
+  const res = await fetch(
+    `${PROXY}/nodes/proxmox/${kind}/${vmid}/status/${proxmoxActionName}`,
+    { method: 'POST', signal: AbortSignal.timeout(15000) }
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (res.status === 204) return null;
+  try { return await res.json(); } catch { return null; }
+}
+
 export async function loadLMStudioPanel(bodyEl) {
   const base = SERVICES_CONFIG.lmstudio.url;
   try {
@@ -172,13 +219,8 @@ export async function loadOllamaPanel(bodyEl) {
 }
 
 export async function loadProxmoxPanel(bodyEl) {
-  const PROXY = SERVICES_CONFIG.proxmox.proxyBase;
   try {
-    const [statusRes,qemuRes,lxcRes] = await Promise.allSettled([fetch(`${PROXY}/nodes/proxmox/status`,{signal:AbortSignal.timeout(7000)}),fetch(`${PROXY}/nodes/proxmox/qemu`,{signal:AbortSignal.timeout(7000)}),fetch(`${PROXY}/nodes/proxmox/lxc`,{signal:AbortSignal.timeout(7000)})]);
-    const ns=statusRes.status==='fulfilled'&&statusRes.value.ok?(await statusRes.value.json()).data:null;
-    const vms=qemuRes.status==='fulfilled'&&qemuRes.value.ok?(await qemuRes.value.json()).data||[]:[];
-    const lxcs=lxcRes.status==='fulfilled'&&lxcRes.value.ok?(await lxcRes.value.json()).data||[]:[];
-    const all=[...vms.map(v=>({...v,_type:'vm'})),...lxcs.map(v=>({...v,_type:'lxc'}))].sort((a,b)=>a.vmid-b.vmid);
+    const { nodeStatus: ns, resources: all } = await fetchProxmoxSnapshot();
     bodyEl.innerHTML = `${ns?`<div class="panel-section"><div class="panel-section__title">Node</div><div class="stat-grid"><div class="stat-item"><div class="stat-item__label">CPU</div><div class="stat-item__value">${((ns.cpu||0)*100).toFixed(1)}%</div></div><div class="stat-item"><div class="stat-item__label">Cores</div><div class="stat-item__value">${ns.cpuinfo?.cpus||'--'}</div></div><div class="stat-item"><div class="stat-item__label">Uptime</div><div class="stat-item__value" style="font-size:0.8rem">${fmtUptime(ns.uptime||0)}</div></div><div class="stat-item"><div class="stat-item__label">Load</div><div class="stat-item__value" style="font-size:0.8rem">${ns.loadavg||[]}</div></div></div>${ns.memory?usageBar(ns.memory.used,ns.memory.total,'RAM'):''}${ns.rootfs?usageBar(ns.rootfs.used,ns.rootfs.total,'Root FS'):''}</div>`:''}<div class="panel-section"><div class="panel-section__title">VMs & Containers (${all.length})</div><table class="panel-table"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th><th>CPU</th><th>RAM</th><th>Uptime</th></tr></thead><tbody>${all.map(vm=>`<tr><td style="color:rgba(255,255,255,0.35)">${vm.vmid}</td><td style="font-weight:500">${vm.name}</td><td style="color:rgba(255,255,255,0.35);font-size:0.75em">${vm._type}</td><td><span class="chip chip--${vm.status}">${vm.status}</span></td><td>${vm.status==='running'?((vm.cpu||0)*100).toFixed(1)+'%':'--'}</td><td>${vm.status==='running'?fmtBytes(vm.mem||0)+' / '+fmtBytes(vm.maxmem||0):'--'}</td><td>${vm.status==='running'?fmtUptime(vm.uptime||0):'--'}</td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { bodyEl.innerHTML = `<div class="panel-error">Error: ${e.message}</div>`; }
 }

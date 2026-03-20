@@ -7,12 +7,18 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  padding: 6px 8px 7px;
   pointer-events: auto;
   cursor: pointer;
   user-select: none;
   transform: translate(-50%, -120%);
   transition: opacity 0.6s ease;
   z-index: 20;
+  border-radius: 10px;
+  background: rgba(4, 10, 18, 0.56);
+  border: 1px solid rgba(120, 180, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .svc-label__name {
   font-family: 'Courier New', monospace;
@@ -21,19 +27,54 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 0 8px currentColor;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.55);
   white-space: nowrap;
 }
 .svc-label__metric {
   font-family: 'Courier New', monospace;
   font-size: 8px;
   letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.58);
   white-space: nowrap;
 }
 .svc-label[data-status="offline"] .svc-label__name { color: rgba(255, 80, 60, 0.75); }
 .svc-label[data-status="offline"] .svc-label__metric { color: rgba(255, 80, 60, 0.45); }
 .svc-label[data-status="degraded"] .svc-label__name { color: rgba(255, 190, 60, 0.75); }
+
+.proxmox-label {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px 8px;
+  transform: translate(-50%, -118%);
+  z-index: 24;
+  user-select: none;
+  transition: opacity 0.18s ease;
+  border-radius: 10px;
+  background: rgba(7, 8, 12, 0.72);
+  border: 1px solid rgba(255, 164, 102, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.proxmox-label__name {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 240, 225, 0.90);
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.62);
+}
+
+.proxmox-label__meta {
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.09em;
+  color: rgba(255, 194, 150, 0.52);
+  white-space: nowrap;
+}
 
 /* Accent dot under label */
 .svc-label::after {
@@ -411,6 +452,148 @@
   text-transform: uppercase;
   color: rgba(255,255,255,0.30);
   margin-bottom: 4px;
+}
+
+.proxmox-hud__title {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 228, 206, 0.94);
+  margin-bottom: 14px;
+}
+
+.proxmox-hud__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.proxmox-hud__stat {
+  padding: 10px 10px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 160, 96, 0.10);
+}
+
+.proxmox-hud__stat span,
+.proxmox-hud__meta,
+.proxmox-hud__detail,
+.proxmox-hud__foot,
+.proxmox-hud__empty {
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.11em;
+}
+
+.proxmox-hud__stat span {
+  display: block;
+  color: rgba(255, 196, 156, 0.42);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.proxmox-hud__stat strong {
+  font-family: 'Courier New', monospace;
+  font-size: 17px;
+  color: rgba(255, 241, 228, 0.92);
+}
+
+.proxmox-hud__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: rgba(255, 197, 154, 0.48);
+  margin-bottom: 14px;
+}
+
+.proxmox-hud__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.proxmox-hud__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) auto auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(8, 10, 14, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.proxmox-hud__row[data-state="running"] {
+  border-color: rgba(56, 242, 161, 0.18);
+}
+
+.proxmox-hud__row[data-state="stopped"] {
+  border-color: rgba(255, 100, 84, 0.18);
+}
+
+.proxmox-hud__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  color: rgba(255, 238, 224, 0.86);
+}
+
+.proxmox-hud__detail {
+  color: rgba(255, 200, 160, 0.52);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.proxmox-hud__actions {
+  display: inline-flex;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.proxmox-action-btn {
+  background: rgba(255, 145, 84, 0.10);
+  border: 1px solid rgba(255, 164, 96, 0.22);
+  border-radius: 999px;
+  color: rgba(255, 220, 190, 0.82);
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 7px;
+  letter-spacing: 0.12em;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
+.proxmox-action-btn:hover:not(:disabled) {
+  background: rgba(255, 145, 84, 0.18);
+  border-color: rgba(255, 185, 120, 0.42);
+}
+
+.proxmox-action-btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.proxmox-hud__foot,
+.proxmox-hud__empty {
+  color: rgba(255, 196, 156, 0.44);
+}
+
+.proxmox-hud__foot {
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.proxmox-hud__empty {
+  padding: 6px 0;
 }
 
 

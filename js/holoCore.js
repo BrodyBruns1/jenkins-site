@@ -78,10 +78,15 @@ export class HoloCore {
   constructor(scene) {
     this._group = new THREE.Group();
     scene.add(this._group);
+    this._fade = 1.0;
 
     this._buildCore();
     this._buildWireframes();
     this._buildLight();
+  }
+
+  setFade(fade) {
+    this._fade = THREE.MathUtils.clamp(fade, 0, 1);
   }
 
   // ── Inner glowing sphere ─────────────────────────────────────────────
@@ -151,7 +156,7 @@ export class HoloCore {
 
   update(elapsed, _delta) {
     // Fade in over 3 s
-    const fade = Math.min(elapsed / 3.0, 1.0);
+    const fade = Math.min(elapsed / 3.0, 1.0) * this._fade;
 
     // Core shader uniforms
     const u = this._coreMesh.material.uniforms;

@@ -23,9 +23,10 @@ import { HoloCore }                    from './holoCore.js';
 import { HomelabPlanet }               from './planet.js';
 import { ServiceNodes }                from './nodes.js';
 import { startServicePolling }         from './services.js';
-import { initPanels }                  from './panels.js';
+import { closePanel, initPanels }      from './panels.js';
 import { DockerPlanet }                from './dockerPlanet.js';
 import { startDockerPolling, dockerEventBus } from './dockerApi.js';
+import { ProxmoxDrillDown }            from './proxmoxDrillDown.js';
 
 // ── Renderer ────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('three-canvas');
@@ -99,7 +100,8 @@ const reactor = new ParticleReactor(scene);
 const rings   = new HealthRings(scene);
 const core    = new HoloCore(scene);
 const planet  = new HomelabPlanet(scene);
-const nodes   = new ServiceNodes(scene, planet.position);
+const proxmoxDrillDown = new ProxmoxDrillDown(scene, camera);
+const nodes   = new ServiceNodes(scene, planet.position, { onSelect: _handleServiceSelect });
 nodes.setCamera(camera);
 
 // Docker planet (section 2 — replaces the old empty sister planet)
@@ -107,7 +109,14 @@ const dockerPlanet = new DockerPlanet(scene, camera);
 
 // ── Scroll-driven camera track ──────────────────────────────────────────────
 const _lookTarget = new THREE.Vector3();
+const _manualLookTarget = new THREE.Vector3();
 let _scrollProgress = 0;
+let _cameraMode = 'scroll';
+let _cameraTransition = null;
+let _drillDownBlend = 0;
+
+const htmlEl = document.documentElement;
+const backBtn = document.getElementById('proxmox-back-btn');
 
 const WAYPOINTS = [
   { cam: new THREE.Vector3(0,     0,    20),  look: new THREE.Vector3(0,      0,    0   ) },
@@ -116,16 +125,24 @@ const WAYPOINTS = [
 ];
 
 function _updateCamera(p) {
+  const pose = _getCameraPose(p);
+  camera.position.copy(pose.cam);
+  _lookTarget.copy(pose.look);
+  camera.lookAt(_lookTarget);
+  camera.updateProjectionMatrix();
+}
+
+function _getCameraPose(p) {
   p = Math.max(0, Math.min(WAYPOINTS.length - 1, p));
   const i  = Math.min(Math.floor(p), WAYPOINTS.length - 2);
   const t  = p - i;
   const te = t * t * (3 - 2 * t);   // smoothstep easing
   const a  = WAYPOINTS[i];
   const b  = WAYPOINTS[i + 1];
-  camera.position.lerpVectors(a.cam, b.cam, te);
-  _lookTarget.lerpVectors(a.look, b.look, te);
-  camera.lookAt(_lookTarget);
-  camera.updateProjectionMatrix();
+  return {
+    cam: new THREE.Vector3().lerpVectors(a.cam, b.cam, te),
+    look: new THREE.Vector3().lerpVectors(a.look, b.look, te),
+  };
 }
 
 function _updateSectionUI(p) {
@@ -156,6 +173,18 @@ function _updateSectionUI(p) {
 document.querySelectorAll('.section-dot').forEach((el, i) => {
   el.addEventListener('click', () =>
     window.scrollTo({ top: i * window.innerHeight, behavior: 'smooth' }));
+});
+
+canvas.addEventListener('click', (e) => {
+  if (_cameraMode !== 'scroll') return;
+  nodes.handlePointerClick(e.clientX, e.clientY);
+});
+
+backBtn?.addEventListener('click', () => _exitProxmoxDrillDown());
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && _cameraMode === 'drilldown') {
+    _exitProxmoxDrillDown();
+  }
 });
 
 // ── DOM -- Docker summary labels ────────────────────────────────────────────
@@ -216,16 +245,155 @@ window.addEventListener('resize', () => {
   bloomPass.resolution.set(w, h);
 });
 
+function _handleServiceSelect(selection) {
+  if (selection.id !== 'proxmox' || _cameraMode !== 'scroll') return false;
+  _enterProxmoxDrillDown(selection);
+  return true;
+}
+
+function _getProxmoxDrillDownShot(selection) {
+  const homelabPlanetPos = planet.position.clone();
+  const axis = selection.position.clone().sub(homelabPlanetPos);
+  if (axis.lengthSq() < 0.0001) axis.set(0, 0, 1);
+  axis.normalize();
+
+  const pushedPlanet = selection.position.clone().add(axis.clone().multiplyScalar(9.6));
+  let planeNormal = new THREE.Vector3(0, 1, 0).cross(axis);
+  if (planeNormal.lengthSq() < 0.0001) planeNormal = new THREE.Vector3(1, 0, 0);
+  planeNormal.normalize();
+  const elevatedNormal = planeNormal.clone().add(new THREE.Vector3(0, 0.95, 0)).normalize();
+  const screenRight = axis.clone().cross(elevatedNormal).normalize();
+
+  const toCam = homelabPlanetPos
+    .clone()
+    .lerp(pushedPlanet, 0.56)
+    .add(elevatedNormal.clone().multiplyScalar(4.25))
+    .add(screenRight.clone().multiplyScalar(1.15))
+    .add(new THREE.Vector3(0, -0.95, 0));
+  const toLook = pushedPlanet
+    .clone()
+    .add(axis.clone().multiplyScalar(2.25))
+    .add(elevatedNormal.clone().multiplyScalar(0.25))
+    .add(screenRight.clone().multiplyScalar(0.35))
+    .add(new THREE.Vector3(0, -0.45, 0));
+
+  return { toCam, toLook, pushedPlanet };
+}
+
+function _enterProxmoxDrillDown(selection) {
+  if (_cameraMode !== 'scroll') return;
+
+  closePanel();
+  htmlEl.classList.add('drilldown-active');
+  nodes.setHiddenIds(['proxmox']);
+  nodes.setFade(0.14);
+  nodes.setLabelFade(0);
+  nodes.setInteractive(false);
+
+  const fromCam = camera.position.clone();
+  const fromLook = _lookTarget.clone();
+  const { toCam, toLook, pushedPlanet } = _getProxmoxDrillDownShot(selection);
+
+  proxmoxDrillDown.activate(selection.position, pushedPlanet);
+
+  _cameraMode = 'transition';
+  _cameraTransition = {
+    startedAt: clock.getElapsedTime(),
+    duration: 1.35,
+    fromCam,
+    fromLook,
+    toCam,
+    toLook,
+    fromBlend: _drillDownBlend,
+    toBlend: 1,
+    onComplete: () => {
+      _cameraMode = 'drilldown';
+      _cameraTransition = null;
+    },
+  };
+}
+
+function _exitProxmoxDrillDown() {
+  if (_cameraMode !== 'drilldown') return;
+
+  const targetPose = _getCameraPose(_scrollProgress);
+
+  _cameraMode = 'transition';
+  _cameraTransition = {
+    startedAt: clock.getElapsedTime(),
+    duration: 1.1,
+    fromCam: camera.position.clone(),
+    fromLook: _manualLookTarget.clone(),
+    toCam: targetPose.cam,
+    toLook: targetPose.look,
+    fromBlend: _drillDownBlend,
+    toBlend: 0,
+    onComplete: () => {
+      htmlEl.classList.remove('drilldown-active');
+      nodes.setHiddenIds([]);
+      nodes.setFade(1);
+      nodes.setLabelFade(1);
+      nodes.setInteractive(true);
+      proxmoxDrillDown.deactivate();
+      _cameraMode = 'scroll';
+      _cameraTransition = null;
+    },
+  };
+}
+
+function _updateCameraTransition(elapsed) {
+  const transition = _cameraTransition;
+  if (!transition) return;
+
+  const t = Math.min((elapsed - transition.startedAt) / transition.duration, 1);
+  const eased = t * t * (3 - 2 * t);
+
+  camera.position.lerpVectors(transition.fromCam, transition.toCam, eased);
+  _manualLookTarget.lerpVectors(transition.fromLook, transition.toLook, eased);
+  camera.lookAt(_manualLookTarget);
+  camera.updateProjectionMatrix();
+
+  _drillDownBlend = THREE.MathUtils.lerp(transition.fromBlend, transition.toBlend, eased);
+  proxmoxDrillDown.setBlend(_drillDownBlend);
+
+  if (t >= 1) {
+    transition.onComplete?.();
+  }
+}
+
+function _updateSceneFocus() {
+  const sceneFade = 1 - 0.95 * _drillDownBlend;
+
+  core.setFade(sceneFade);
+  rings.setFade(sceneFade);
+  planet.setFade(sceneFade);
+  dockerPlanet.setFade(sceneFade);
+
+  nodes.setFade(Math.max(sceneFade, 0.12));
+  nodes.setLabelFade(Math.max(sceneFade, 0.0));
+  reactor.setVisible(sceneFade > 0.18);
+}
+
 // ── Animation loop ──────────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
   const delta   = clock.getDelta();
   const elapsed = clock.getElapsedTime();
 
-  // Direct scroll camera — no snap, no lag
   _scrollProgress = window.scrollY / window.innerHeight;
-  _updateCamera(_scrollProgress);
-  _updateSectionUI(_scrollProgress);
+  if (_cameraMode === 'scroll') {
+    _updateCamera(_scrollProgress);
+    _manualLookTarget.copy(_lookTarget);
+    proxmoxDrillDown.setBlend(0);
+  } else if (_cameraMode === 'transition') {
+    _updateCameraTransition(elapsed);
+  }
+
+  _updateSceneFocus();
+
+  if (_cameraMode === 'scroll') {
+    _updateSectionUI(_scrollProgress);
+  }
 
   reactor.update(elapsed);
   rings.update(elapsed, delta);
@@ -233,6 +401,7 @@ function animate() {
   planet.update(elapsed, delta);
   nodes.update(elapsed, delta);
   dockerPlanet.update(elapsed, delta);
+  proxmoxDrillDown.update(elapsed, delta);
 
   _animateRings(elapsed);
 

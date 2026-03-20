@@ -32,12 +32,19 @@ export class ServiceNodes {
   /**
    * @param {THREE.Scene}  scene
    * @param {THREE.Vector3} planetPos -- world-space center of HomelabPlanet
-   * @param {THREE.Camera}  camera   -- for label projection (set via setCamera)
+   * @param {{ onSelect?: function }} options
    */
-  constructor(scene, planetPos) {
-    this._scene     = scene;
-    this._planetPos = planetPos;
-    this._camera    = null;  // set by main.js after construction
+  constructor(scene, planetPos, options = {}) {
+    this._scene      = scene;
+    this._planetPos  = planetPos;
+    this._camera     = null;  // set by main.js after construction
+    this._onSelect   = options.onSelect || null;
+    this._raycaster  = new THREE.Raycaster();
+    this._pointer    = new THREE.Vector2();
+    this._hiddenIds  = new Set();
+    this._fade       = 1.0;
+    this._labelFade  = 1.0;
+    this._interactive = true;
 
     this._nodes    = [];   // { mesh, wire, beamGeo, beamLine, labelEl, angle, status, metric, health }
     this._angles   = SERVICE_DEFS.map((_, i) => (i / SERVICE_DEFS.length) * Math.PI * 2);
@@ -47,6 +54,10 @@ export class ServiceNodes {
   }
 
   setCamera(camera) { this._camera = camera; }
+  setFade(fade) { this._fade = THREE.MathUtils.clamp(fade, 0, 1); }
+  setLabelFade(fade) { this._labelFade = THREE.MathUtils.clamp(fade, 0, 1); }
+  setInteractive(enabled) { this._interactive = !!enabled; }
+  setHiddenIds(ids) { this._hiddenIds = new Set(ids); }
 
   // ── Build ────────────────────────────────────────────────────────────────
 
@@ -100,13 +111,20 @@ export class ServiceNodes {
         <span class="svc-label__metric">--</span>`;
       labelEl.style.pointerEvents = 'auto';
       labelEl.style.cursor = 'pointer';
-      labelEl.addEventListener('click', () => openPanel(def.id));
       document.body.appendChild(labelEl);
 
-      this._nodes.push({
+      const node = {
         def, mesh, wire, beamGeo, beamLine, labelEl,
         health: 1.0, healthTarget: 1.0, status: 'pending', metric: '--',
+      };
+
+      labelEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._emitSelection(node);
       });
+
+      this._nodes.push(node);
     }
   }
 
@@ -144,6 +162,7 @@ export class ServiceNodes {
     for (let i = 0; i < this._nodes.length; i++) {
       const node = this._nodes[i];
       const def  = node.def;
+      const hidden = this._hiddenIds.has(def.id);
 
       // Lerp health
       node.health += (node.healthTarget - node.health) * lk;
@@ -172,8 +191,21 @@ export class ServiceNodes {
       node.mesh.rotation.z = elapsed * 0.25 + i * 0.7;
       node.wire.rotation.copy(node.mesh.rotation);
 
+      if (hidden) {
+        node.mesh.visible = false;
+        node.wire.visible = false;
+        node.beamLine.visible = false;
+        node.labelEl.style.opacity = '0';
+        node.labelEl.style.pointerEvents = 'none';
+        continue;
+      }
+
+      node.mesh.visible = true;
+      node.wire.visible = true;
+      node.beamLine.visible = true;
+
       // Opacity driven by health
-      const targetAlpha = 0.12 + 0.58 * node.health;
+      const targetAlpha = (0.12 + 0.58 * node.health) * this._fade;
       node.mesh.material.opacity = THREE.MathUtils.lerp(node.mesh.material.opacity, targetAlpha, lk);
       node.wire.material.opacity = THREE.MathUtils.lerp(node.wire.material.opacity, targetAlpha * 0.6, lk);
 
@@ -182,8 +214,9 @@ export class ServiceNodes {
       bp.setXYZ(0, x, y, z);
       bp.setXYZ(1, P.x, P.y, P.z);
       bp.needsUpdate = true;
-      node.beamLine.material.opacity = 0.12 + 0.18 * node.health *
-        (0.5 + 0.5 * Math.sin(elapsed * 1.2 + i));
+      node.beamLine.material.opacity = (
+        0.12 + 0.18 * node.health * (0.5 + 0.5 * Math.sin(elapsed * 1.2 + i))
+      ) * this._fade;
 
       // Update HTML label position
       if (this._camera) {
@@ -209,10 +242,50 @@ export class ServiceNodes {
       return;
     }
 
-    node.labelEl.style.opacity  = String(0.3 + 0.7 * node.health);
+    node.labelEl.style.opacity  = String((0.3 + 0.7 * node.health) * this._labelFade);
     node.labelEl.style.left     = `${px}px`;
     node.labelEl.style.top      = `${py}px`;
-    node.labelEl.style.pointerEvents = 'auto';
+    node.labelEl.style.pointerEvents = this._interactive && this._labelFade > 0.05 ? 'auto' : 'none';
+  }
+
+  handlePointerClick(clientX, clientY) {
+    if (!this._interactive || !this._camera) return false;
+
+    this._pointer.x = (clientX / window.innerWidth) * 2 - 1;
+    this._pointer.y = -((clientY / window.innerHeight) * 2 - 1);
+    this._raycaster.setFromCamera(this._pointer, this._camera);
+
+    const candidates = this._nodes
+      .filter(node => !this._hiddenIds.has(node.def.id) && node.mesh.visible)
+      .map(node => node.mesh);
+    const hit = this._raycaster.intersectObjects(candidates, false)[0];
+    if (!hit) return false;
+
+    const node = this._nodes.find(entry => entry.mesh === hit.object);
+    if (!node) return false;
+
+    this._emitSelection(node);
+    return true;
+  }
+
+  _emitSelection(node) {
+    if (!this._interactive || this._hiddenIds.has(node.def.id)) return;
+
+    const position = new THREE.Vector3();
+    node.mesh.getWorldPosition(position);
+
+    const selection = {
+      id: node.def.id,
+      label: node.def.label,
+      position,
+      status: node.status,
+      metric: node.metric,
+    };
+
+    const handled = this._onSelect?.(selection);
+    if (handled === true) return;
+
+    openPanel(node.def.id);
   }
 
   dispose() {

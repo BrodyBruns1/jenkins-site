@@ -138,6 +138,7 @@ export class HomelabPlanet {
     this._group = new THREE.Group();
     this._group.position.set(-8.5, -5.0, -2.0);
     scene.add(this._group);
+    this._fade = 1.0;
 
     // Health targets per service (lerped toward over time)
     this._healthTarget = new Float32Array(6).fill(1.0);
@@ -263,6 +264,10 @@ export class HomelabPlanet {
 
   // ── Per-frame update ───────────────────────────────────────────────────
 
+  setFade(fade) {
+    this._fade = THREE.MathUtils.clamp(fade, 0, 1);
+  }
+
   update(elapsed, delta) {
     // Idle planet rotation
     this._planetMesh.rotation.y = elapsed * 0.06;
@@ -285,14 +290,17 @@ export class HomelabPlanet {
     u.uHealth3.value = this._healthCurrent[3];
     u.uHealth4.value = this._healthCurrent[4];
     u.uHealth5.value = this._healthCurrent[5];
+    this._planetMat.opacity = 0.96 * this._fade;
 
     // Lerp ring opacities
     const ok = Math.min(delta * 0.8, 1.0);
     for (let i = 0; i < 3; i++) {
       this._ringOpacityCurrent[i] +=
         (this._ringOpacityTarget[i] - this._ringOpacityCurrent[i]) * ok;
-      this._ringMeshes[i].material.opacity = this._ringOpacityCurrent[i];
+      this._ringMeshes[i].material.opacity = this._ringOpacityCurrent[i] * this._fade;
     }
+
+    if (this._group.children[1]) this._group.children[1].material.opacity = 0.08 * this._fade;
   }
 
   /** World-space center of the planet (used by nodes.js for orbits) */
