@@ -43,6 +43,48 @@ export async function containerAction(containerId, action) {
   setTimeout(pollDocker, 1200);
 }
 
+export async function fetchContainerStats(containerId) {
+  const stats = await fetchJSON(
+    `/endpoints/${ENDPOINT_ID}/docker/containers/${containerId}/stats?stream=false`,
+    { timeout: 10000 }
+  );
+
+  const cpuUsage = stats?.cpu_stats?.cpu_usage?.total_usage || 0;
+  const prevCpuUsage = stats?.precpu_stats?.cpu_usage?.total_usage || 0;
+  const systemUsage = stats?.cpu_stats?.system_cpu_usage || 0;
+  const prevSystemUsage = stats?.precpu_stats?.system_cpu_usage || 0;
+  const onlineCpus =
+    stats?.cpu_stats?.online_cpus ||
+    stats?.cpu_stats?.cpu_usage?.percpu_usage?.length ||
+    1;
+
+  const cpuDelta = cpuUsage - prevCpuUsage;
+  const systemDelta = systemUsage - prevSystemUsage;
+  const cpuPercent = cpuDelta > 0 && systemDelta > 0
+    ? (cpuDelta / systemDelta) * onlineCpus * 100
+    : 0;
+
+  const memStats = stats?.memory_stats || {};
+  const inactive = memStats.stats?.inactive_file || memStats.stats?.cache || 0;
+  const memoryUsage = Math.max((memStats.usage || 0) - inactive, 0);
+  const memoryLimit = memStats.limit || 0;
+  const memoryPercent = memoryLimit > 0 ? (memoryUsage / memoryLimit) * 100 : 0;
+
+  const networkEntries = Object.values(stats?.networks || {});
+  const networkRx = networkEntries.reduce((sum, net) => sum + (net.rx_bytes || 0), 0);
+  const networkTx = networkEntries.reduce((sum, net) => sum + (net.tx_bytes || 0), 0);
+
+  return {
+    readAt: Date.now(),
+    cpuPercent,
+    memoryUsage,
+    memoryLimit,
+    memoryPercent,
+    networkRx,
+    networkTx,
+  };
+}
+
 // ── Parse raw Portainer/Docker container JSON into clean objects ─────────────
 
 function parseContainer(c) {

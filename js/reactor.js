@@ -16,9 +16,20 @@ import * as THREE from 'three';
 import { buildEventBus } from './api.js';
 
 const VERT = /* glsl */`
+  #define ELLIPSE_COUNT 4
+  #define IMPACT_COUNT 6
   uniform float uTime;
   uniform float uBurstTime;    // elapsed time when last burst fired (-999 = never)
   uniform float uShockTime;    // elapsed time when last shockwave fired (-999 = never)
+  uniform float uResponseTime; // elapsed time when last response blast fired (-999 = never)
+  uniform float uResponseStrength;
+  uniform vec3  uEllipseCenter[ELLIPSE_COUNT];
+  uniform vec3  uEllipseNormal[ELLIPSE_COUNT];
+  uniform float uEllipseRadius[ELLIPSE_COUNT];
+  uniform float uEllipseThickness[ELLIPSE_COUNT];
+  uniform float uEllipseStrength[ELLIPSE_COUNT];
+  uniform vec3  uImpactCenter[IMPACT_COUNT];
+  uniform float uImpactStrength[IMPACT_COUNT];
   uniform float uMood;         // -1 = failures, 0 = normal, +1 = all-green
   uniform vec2  uMouse;        // cursor in NDC space (-1..1)
   uniform float uMouseRadius;  // rainbow influence radius in NDC
@@ -30,9 +41,16 @@ const VERT = /* glsl */`
 
   varying float vAlpha;
   varying vec3  vColor;
+  varying float vResponseWave;
+  varying float vEllipseWave;
+  varying float vImpactWave;
 
   void main() {
     vec3 pos = aBasePos;
+    float origDist = length(aBasePos);
+    vResponseWave = 0.0;
+    vEllipseWave = 0.0;
+    vImpactWave = 0.0;
 
     // ── Brownian drift ──────────────────────────────────────────────────────
     // Calmer when all-green (uMood=1), more agitated when failures (uMood=-1)
@@ -62,7 +80,6 @@ const VERT = /* glsl */`
     float shockAge = t - uShockTime;
     if (shockAge > 0.0 && shockAge < 3.0) {
       float waveFront = shockAge * 7.0;
-      float origDist  = length(aBasePos);
       // Particles near the wave front get displaced outward
       float envelope  = smoothstep(waveFront - 1.8, waveFront, origDist)
                       * (1.0 - smoothstep(waveFront, waveFront + 0.6, origDist));
@@ -70,8 +87,52 @@ const VERT = /* glsl */`
       pos += normalize(aBasePos + 0.001) * envelope * shockDecay * 6.0;
     }
 
+    // ── Response blast: larger, brighter wave through the whole field ──────
+    float responseAge = t - uResponseTime;
+    if (responseAge > 0.0 && responseAge < 4.6) {
+      float responseFront = responseAge * (10.5 + uResponseStrength * 2.4);
+      float responseBand  = exp(-abs(origDist - responseFront) * 0.55);
+      float responseDecay = exp(-responseAge * 0.62) * uResponseStrength;
+      vResponseWave = responseBand * responseDecay;
+      pos += normalize(aBasePos + 0.001) * vResponseWave * (5.5 + uResponseStrength * 2.5);
+    }
+
+    for (int i = 0; i < ELLIPSE_COUNT; i++) {
+      float ellipseStrength = uEllipseStrength[i];
+      if (ellipseStrength <= 0.0001) continue;
+
+      vec3 rel = pos - uEllipseCenter[i];
+      float signedPlaneDist = dot(rel, uEllipseNormal[i]);
+      vec3 planeOffset = rel - uEllipseNormal[i] * signedPlaneDist;
+      float ringPathDist = abs(length(planeOffset) - uEllipseRadius[i]);
+      float planeBand = exp(-abs(signedPlaneDist) / max(uEllipseThickness[i] * 0.55, 0.001));
+      float radialBand = exp(-ringPathDist / max(uEllipseThickness[i], 0.001));
+      float ellipseBand = planeBand * radialBand * ellipseStrength;
+      vEllipseWave += ellipseBand * 1.35;
+
+      if (length(planeOffset) > 0.001) {
+        pos += normalize(planeOffset) * ellipseBand * (2.2 + ellipseStrength * 2.8);
+      }
+      pos += uEllipseNormal[i] * signedPlaneDist * ellipseBand * 0.16;
+    }
+
+    for (int i = 0; i < IMPACT_COUNT; i++) {
+      float impactStrength = uImpactStrength[i];
+      if (impactStrength <= 0.0001) continue;
+
+      vec3 impactDelta = pos - uImpactCenter[i];
+      float impactDist = length(impactDelta);
+      float impactBand = exp(-impactDist * 0.85) * impactStrength;
+      vImpactWave += impactBand;
+
+      if (impactDist > 0.001) {
+        pos += normalize(impactDelta) * impactBand * (2.2 + impactStrength * 3.4);
+      }
+    }
+
     vec4 mvPos    = modelViewMatrix * vec4(pos, 1.0);
     float sz      = aSize * (280.0 / -mvPos.z);
+    sz *= 1.0 + min(vResponseWave * 1.1 + vEllipseWave * 1.15 + vImpactWave * 1.4, 2.4);
     gl_PointSize  = clamp(sz, 0.3, 7.0);
     gl_Position   = projectionMatrix * mvPos;
 
@@ -83,10 +144,26 @@ const VERT = /* glsl */`
     vec3  greenCol = vec3(0.00, 0.82, 0.52);   // all-green teal
 
     vColor = mix(mix(baseCol, failCol, failBlend), greenCol, greenBlend);
+    if (vResponseWave > 0.001) {
+      float waveHue = 0.5 + 0.5 * sin(origDist * 0.65 - responseAge * 8.5 + aPhase * 0.7);
+      vec3 responseCol = mix(vec3(0.36, 0.95, 1.00), vec3(1.00, 0.38, 0.78), waveHue);
+      vColor = mix(vColor, responseCol, min(vResponseWave * 1.05, 0.96));
+    }
+    if (vEllipseWave > 0.001) {
+      float ellipseHue = 0.5 + 0.5 * sin(origDist * 0.5 + aPhase * 1.3 + uTime * 1.8);
+      vec3 ellipseCol = mix(vec3(0.22, 0.72, 1.00), vec3(0.62, 0.90, 1.00), ellipseHue);
+      vColor = mix(vColor, ellipseCol, min(vEllipseWave * 1.05, 0.94));
+    }
+    if (vImpactWave > 0.001) {
+      float impactHue = 0.5 + 0.5 * sin(aPhase * 1.8 + uTime * 4.5 + origDist * 0.35);
+      vec3 impactCol = mix(vec3(1.00, 0.90, 0.48), vec3(0.50, 0.94, 1.00), impactHue);
+      vColor = mix(vColor, impactCol, min(vImpactWave * 1.2, 0.92));
+    }
 
     // Depth fade + pulse
     float depthFade = clamp((-mvPos.z - 1.0) / 28.0, 0.0, 1.0);
     vAlpha = depthFade * (0.35 + 0.65 * sin(t * 0.5 + aPhase));
+    vAlpha = min(vAlpha + vResponseWave * 0.45 + vEllipseWave * 0.72 + vImpactWave * 0.95, 1.0);
 
     // ── Cursor rainbow ──────────────────────────────────────────────────────
     // Particles near the cursor in NDC space get a rainbow hue.
@@ -120,12 +197,28 @@ const FRAG = /* glsl */`
 export class ParticleReactor {
   constructor(scene) {
     this._elapsed = 0;
+    this._visible = true;
 
     // Uniforms shared with the shader
     this._u = {
       uTime:        { value: 0.0 },
       uBurstTime:   { value: -999.0 },
       uShockTime:   { value: -999.0 },
+      uResponseTime:{ value: -999.0 },
+      uResponseStrength: { value: 0.0 },
+      uEllipseCenter: {
+        value: [0, 1, 2, 3].map(() => new THREE.Vector3(9999, 9999, 9999)),
+      },
+      uEllipseNormal: {
+        value: [0, 1, 2, 3].map(() => new THREE.Vector3(0, 0, 1)),
+      },
+      uEllipseRadius: { value: [0, 0, 0, 0] },
+      uEllipseThickness: { value: [0.2, 0.2, 0.2, 0.2] },
+      uEllipseStrength: { value: [0, 0, 0, 0] },
+      uImpactCenter: {
+        value: [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector3(9999, 9999, 9999)),
+      },
+      uImpactStrength: { value: [0, 0, 0, 0, 0, 0] },
       uMood:        { value: 0.0 },
       uMouse:       { value: new THREE.Vector2(9999, 9999) },
       uMouseRadius: { value: 0.28 },
@@ -212,9 +305,66 @@ export class ParticleReactor {
     this._u.uMouse.value.set(ndcX, ndcY);
   }
 
+  setVisible(visible) {
+    this._visible = !!visible;
+    if (this._points) this._points.visible = this._visible;
+  }
+
+  setSpeechEllipses(ellipses = []) {
+    const centers = this._u.uEllipseCenter.value;
+    const normals = this._u.uEllipseNormal.value;
+    const radii = this._u.uEllipseRadius.value;
+    const thicknesses = this._u.uEllipseThickness.value;
+    const strengths = this._u.uEllipseStrength.value;
+
+    for (let i = 0; i < centers.length; i++) {
+      const ellipse = ellipses[i];
+      if (!ellipse) {
+        centers[i].set(9999, 9999, 9999);
+        normals[i].set(0, 0, 1);
+        radii[i] = 0;
+        thicknesses[i] = 0.2;
+        strengths[i] = 0;
+        continue;
+      }
+
+      centers[i].copy(ellipse.center);
+      normals[i].copy(ellipse.normal);
+      radii[i] = ellipse.radius;
+      thicknesses[i] = ellipse.thickness;
+      strengths[i] = ellipse.strength;
+    }
+  }
+
+  setImpactBursts(impacts = []) {
+    const centers = this._u.uImpactCenter.value;
+    const strengths = this._u.uImpactStrength.value;
+
+    for (let i = 0; i < centers.length; i++) {
+      const impact = impacts[i];
+      if (!impact) {
+        centers[i].set(9999, 9999, 9999);
+        strengths[i] = 0;
+        continue;
+      }
+
+      centers[i].copy(impact.position);
+      strengths[i] = impact.strength;
+    }
+  }
+
+  triggerSpeechResponse(strength = 1) {
+    const boosted = THREE.MathUtils.clamp(strength || 1, 0.8, 3.0);
+    this._u.uBurstTime.value = this._elapsed;
+    this._u.uShockTime.value = this._elapsed;
+    this._u.uResponseTime.value = this._elapsed;
+    this._u.uResponseStrength.value = boosted;
+  }
+
   /** Called every frame by main.js */
   update(elapsed) {
     this._elapsed        = elapsed;
     this._u.uTime.value  = elapsed;
+    if (this._points) this._points.visible = this._visible;
   }
 }

@@ -15,7 +15,7 @@ import {
 
 import {
   containerAction, getContainers, getCustomGroups,
-  saveCustomGroups, resetGroups, dockerEventBus,
+  saveCustomGroups, resetGroups, dockerEventBus, fetchContainerStats,
 } from './dockerApi.js';
 
 const LOADERS = {
@@ -28,10 +28,15 @@ const LOADERS = {
 };
 
 let _current = null;
+let _dockerStatsTimer = null;
+const _dockerStatsHistory = new Map();
+const DOCKER_STATS_INTERVAL = 3000;
+const DOCKER_HISTORY_LIMIT = 30;
 
 // ── Public API ────────────────────────────────────────────────────────────
 
 export function openPanel(id) {
+  if (id !== 'docker') _stopDockerStatsPolling();
   if (_current && _current !== id) {
     document.getElementById(`panel-${_current}`)?.classList.remove('is-open');
   }
@@ -49,6 +54,7 @@ export function openPanel(id) {
 
 export function closePanel() {
   if (!_current) return;
+  if (_current === 'docker') _stopDockerStatsPolling();
   document.getElementById('panelOverlay')?.classList.remove('is-open');
   document.getElementById(`panel-${_current}`)?.classList.remove('is-open');
   document.body.style.overflow = '';
@@ -80,7 +86,9 @@ async function _loadData(id) {
 let _dockerContainerId = null;
 
 function openDockerPanel(containerId) {
+  _stopDockerStatsPolling();
   _dockerContainerId = containerId;
+  window._lastDockerContainerId = containerId;
 
   if (_current && _current !== 'docker') {
     document.getElementById(`panel-${_current}`)?.classList.remove('is-open');
@@ -123,6 +131,7 @@ async function _loadDockerPanel() {
 
   const isRunning = c.state === 'running';
   const isPaused  = c.state === 'paused';
+  const latestStats = _getLatestDockerStats(c.id);
 
   bodyEl.innerHTML = `
     <div class="panel-section">
@@ -148,6 +157,27 @@ async function _loadDockerPanel() {
                 ${!isRunning && !isPaused ? 'disabled' : ''}>Stop</button>
         <button class="panel-btn docker-actions panel-btn--restart" id="docker-act-restart"
                 ${!isRunning ? 'disabled' : ''}>Restart</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section__title">Live Stats</div>
+      <div class="docker-stats-grid">
+        <div class="docker-stat-card">
+          <div class="docker-stat-card__label">CPU</div>
+          <div class="docker-stat-card__value" id="docker-stats-cpu-value">${_fmtPercent(latestStats?.cpuPercent)}</div>
+          <canvas class="docker-sparkline" id="docker-cpu-sparkline" width="320" height="70"></canvas>
+        </div>
+        <div class="docker-stat-card">
+          <div class="docker-stat-card__label">Memory</div>
+          <div class="docker-stat-card__value" id="docker-stats-mem-value">${_fmtBytes(latestStats?.memoryUsage)}${latestStats?.memoryLimit ? ` / ${_fmtBytes(latestStats.memoryLimit)}` : ''}</div>
+          <canvas class="docker-sparkline" id="docker-mem-sparkline" width="320" height="70"></canvas>
+          <div class="docker-stat-card__meta" id="docker-stats-mem-percent">${_fmtPercent(latestStats?.memoryPercent)}</div>
+        </div>
+      </div>
+      <div class="docker-network-row">
+        <span class="docker-network-pill">RX <strong id="docker-stats-rx-value">${_fmtBytes(latestStats?.networkRx)}</strong></span>
+        <span class="docker-network-pill">TX <strong id="docker-stats-tx-value">${_fmtBytes(latestStats?.networkTx)}</strong></span>
       </div>
     </div>
 
@@ -201,6 +231,153 @@ async function _loadDockerPanel() {
   startBtn?.addEventListener('click',   () => doAction(startBtn, 'start'));
   stopBtn?.addEventListener('click',    () => doAction(stopBtn, 'stop'));
   restartBtn?.addEventListener('click', () => doAction(restartBtn, 'restart'));
+
+  _startDockerStatsPolling(c.id);
+  _renderDockerStatsVisuals(c.id);
+}
+
+function _startDockerStatsPolling(containerId) {
+  _stopDockerStatsPolling();
+  _pollDockerStats(containerId);
+  _dockerStatsTimer = setInterval(() => _pollDockerStats(containerId), DOCKER_STATS_INTERVAL);
+}
+
+function _stopDockerStatsPolling() {
+  if (_dockerStatsTimer) {
+    clearInterval(_dockerStatsTimer);
+    _dockerStatsTimer = null;
+  }
+}
+
+async function _pollDockerStats(containerId) {
+  try {
+    const sample = await fetchContainerStats(containerId);
+    const history = _dockerStatsHistory.get(containerId) || [];
+    history.push(sample);
+    if (history.length > DOCKER_HISTORY_LIMIT) history.splice(0, history.length - DOCKER_HISTORY_LIMIT);
+    _dockerStatsHistory.set(containerId, history);
+    _renderDockerStatsVisuals(containerId);
+  } catch (_e) {
+    // Keep the panel usable even when stats sampling fails intermittently.
+  }
+}
+
+function _getLatestDockerStats(containerId) {
+  const history = _dockerStatsHistory.get(containerId);
+  return history?.[history.length - 1] || null;
+}
+
+function _renderDockerStatsVisuals(containerId) {
+  if (_current !== 'docker' || _dockerContainerId !== containerId) return;
+
+  const history = _dockerStatsHistory.get(containerId) || [];
+  const latest = history[history.length - 1] || null;
+
+  const cpuEl = document.getElementById('docker-stats-cpu-value');
+  const memEl = document.getElementById('docker-stats-mem-value');
+  const memPctEl = document.getElementById('docker-stats-mem-percent');
+  const rxEl = document.getElementById('docker-stats-rx-value');
+  const txEl = document.getElementById('docker-stats-tx-value');
+
+  if (cpuEl) cpuEl.textContent = _fmtPercent(latest?.cpuPercent);
+  if (memEl) {
+    memEl.textContent = latest
+      ? `${_fmtBytes(latest.memoryUsage)}${latest.memoryLimit ? ` / ${_fmtBytes(latest.memoryLimit)}` : ''}`
+      : '--';
+  }
+  if (memPctEl) memPctEl.textContent = _fmtPercent(latest?.memoryPercent);
+  if (rxEl) rxEl.textContent = _fmtBytes(latest?.networkRx);
+  if (txEl) txEl.textContent = _fmtBytes(latest?.networkTx);
+
+  const cpuCanvas = document.getElementById('docker-cpu-sparkline');
+  const memCanvas = document.getElementById('docker-mem-sparkline');
+  if (cpuCanvas) {
+    _drawSparkline(
+      cpuCanvas,
+      history.map(sample => sample.cpuPercent),
+      { stroke: 'rgba(0, 214, 255, 0.92)', fill: 'rgba(0, 214, 255, 0.14)' }
+    );
+  }
+  if (memCanvas) {
+    _drawSparkline(
+      memCanvas,
+      history.map(sample => sample.memoryPercent),
+      { stroke: 'rgba(82, 255, 162, 0.92)', fill: 'rgba(82, 255, 162, 0.14)' }
+    );
+  }
+}
+
+function _drawSparkline(canvas, values, colors) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = 6;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, height - padding);
+  ctx.lineTo(width, height - padding);
+  ctx.stroke();
+
+  if (!values.length) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
+    ctx.font = '11px Courier New';
+    ctx.fillText('waiting for samples...', padding, height * 0.58);
+    return;
+  }
+
+  const maxValue = Math.max(5, ...values);
+  const minValue = Math.min(0, ...values);
+  const span = Math.max(maxValue - minValue, 1);
+
+  ctx.beginPath();
+  values.forEach((value, idx) => {
+    const x = padding + ((width - padding * 2) * idx) / Math.max(values.length - 1, 1);
+    const norm = (value - minValue) / span;
+    const y = height - padding - norm * (height - padding * 2);
+    if (idx === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+
+  ctx.lineTo(width - padding, height - padding);
+  ctx.lineTo(padding, height - padding);
+  ctx.closePath();
+  ctx.fillStyle = colors.fill;
+  ctx.fill();
+
+  ctx.beginPath();
+  values.forEach((value, idx) => {
+    const x = padding + ((width - padding * 2) * idx) / Math.max(values.length - 1, 1);
+    const norm = (value - minValue) / span;
+    const y = height - padding - norm * (height - padding * 2);
+    if (idx === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = colors.stroke;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function _fmtPercent(value) {
+  if (value == null || Number.isNaN(value)) return '--';
+  return `${value.toFixed(value >= 10 ? 0 : 1)}%`;
+}
+
+function _fmtBytes(value) {
+  if (value == null || Number.isNaN(value)) return '--';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = value;
+  let unitIdx = 0;
+  while (size >= 1024 && unitIdx < units.length - 1) {
+    size /= 1024;
+    unitIdx++;
+  }
+  const decimals = size >= 100 ? 0 : size >= 10 ? 1 : 2;
+  return `${size.toFixed(decimals)} ${units[unitIdx]}`;
 }
 
 // ── Docker group editor modal ───────────────────────────────────────────────
