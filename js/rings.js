@@ -78,6 +78,11 @@ export class HealthRings {
     this._rings = [];
     this._group = new THREE.Group();
     this._fade = 1.0;
+    this._speechLevel = 0.0;
+    this._speechEnergy = 0.0;
+    this._speechFrequency = 0.0;
+    this._speechFrequencyTarget = 0.0;
+    this._responseEnergy = 0.0;
     // Upper-right quadrant; z slightly negative for natural depth cue
     this._group.position.set(9.0, 8.0, -1.0);
     scene.add(this._group);
@@ -109,6 +114,12 @@ export class HealthRings {
       mesh.rotation.z = def.tz;
       mesh.renderOrder = 2;
       mesh.userData.ry = def.ry;
+      mesh.userData.baseTx = def.tx;
+      mesh.userData.baseTz = def.tz;
+      mesh.userData.baseRadius = def.r;
+      mesh.userData.baseTube = def.t;
+      mesh.userData.index = i;
+      mesh.userData.waveStrength = 0;
 
       this._group.add(mesh);
       this._rings.push(mesh);
@@ -125,6 +136,51 @@ export class HealthRings {
 
   setFade(fade) {
     this._fade = THREE.MathUtils.clamp(fade, 0, 1);
+  }
+
+  setSpeechActivity({ level = 0, speaking = false, frequency = 0 } = {}) {
+    const targetLevel = THREE.MathUtils.clamp(level || 0, 0, 1);
+    this._speechLevel = speaking ? Math.max(targetLevel, 0.06) : 0.0;
+
+    const targetFrequency = Number(frequency) || 0;
+    if (speaking && targetFrequency > 0) {
+      this._speechFrequencyTarget = THREE.MathUtils.clamp(targetFrequency, 70, 340);
+    } else if (!speaking) {
+      this._speechFrequencyTarget = 0.0;
+    }
+  }
+
+  triggerResponsePulse(strength = 1) {
+    this._responseEnergy = Math.max(
+      this._responseEnergy,
+      THREE.MathUtils.clamp(strength || 0, 0, 3)
+    );
+  }
+
+  getSpeechContours() {
+    const contours = [];
+
+    for (const ring of this._rings) {
+      const center = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      const normal = new THREE.Vector3(0, 0, 1);
+
+      ring.getWorldPosition(center);
+      ring.getWorldQuaternion(quaternion);
+      ring.getWorldScale(scale);
+      normal.applyQuaternion(quaternion).normalize();
+
+      contours.push({
+        center,
+        normal,
+        radius: ring.userData.baseRadius * scale.x,
+        thickness: Math.max(ring.userData.baseTube * scale.x * 10.0, 0.4),
+        strength: ring.userData.waveStrength || 0,
+      });
+    }
+
+    return contours;
   }
 
   // ── Event subscriptions ───────────────────────────────────────────────────
@@ -166,12 +222,45 @@ export class HealthRings {
 
   /** Called every frame by main.js. delta in seconds. */
   update(elapsed, delta) {
+    this._speechEnergy += (this._speechLevel - this._speechEnergy) * 0.14;
+    this._speechFrequency += (this._speechFrequencyTarget - this._speechFrequency) * 0.18;
+    this._responseEnergy += (0 - this._responseEnergy) * 0.05;
+
+    const visibleVoiceRate = THREE.MathUtils.mapLinear(
+      THREE.MathUtils.clamp(this._speechFrequency || 140, 70, 340),
+      70, 340,
+      4.2, 10.8
+    );
+    const pitchNorm = THREE.MathUtils.clamp(
+      THREE.MathUtils.mapLinear(this._speechFrequency || 140, 70, 340, 0, 1),
+      0, 1
+    );
+    const responsePulse = this._responseEnergy * (0.65 + 0.35 * Math.sin(elapsed * 8.4));
+
     for (const ring of this._rings) {
       ring.rotation.y += delta * ring.userData.ry;
+      const idx = ring.userData.index;
+      const voicePhase = elapsed * visibleVoiceRate + idx * 0.95;
+      const voiceTremor = this._speechEnergy * (0.02 + idx * 0.006);
+      const responseTremor = responsePulse * (0.03 + idx * 0.008);
+      const pitchExpansion = this._speechEnergy * (0.05 + pitchNorm * 0.20) * (1 + idx * 0.10);
+      const responseExpansion = responsePulse * (0.04 + idx * 0.01);
+      ring.rotation.x = ring.userData.baseTx
+        + Math.sin(voicePhase) * voiceTremor
+        + Math.cos(elapsed * 6.2 + idx) * responseTremor;
+      ring.rotation.z = ring.userData.baseTz
+        + Math.cos(voicePhase * 1.12) * voiceTremor * 0.92
+        + Math.sin(elapsed * 7.4 + idx * 0.8) * responseTremor;
+      ring.scale.setScalar(1 + pitchExpansion + responseExpansion);
+      ring.userData.waveStrength = this._speechEnergy * (0.48 + pitchNorm * 0.95)
+        + responsePulse * (0.16 + idx * 0.02);
+
       const u = ring.material.uniforms;
       u.uTime.value = elapsed;
       // Fade rings in over first 2 s
-      u.uDimAlpha.value = Math.min(elapsed / 2.0, 1.0) * this._fade;
+      u.uDimAlpha.value = Math.min(elapsed / 2.0, 1.0)
+        * this._fade
+        * (1 + this._speechEnergy * 0.22 + responsePulse * 0.34);
     }
   }
 

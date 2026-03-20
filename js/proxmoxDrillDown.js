@@ -45,6 +45,7 @@ export class ProxmoxDrillDown {
     this._snapshot = null;
     this._statusText = '';
     this._busyKey = null;
+    this._angleByKey = new Map();
 
     this._buildPlanet();
     this._buildLights();
@@ -119,7 +120,6 @@ export class ProxmoxDrillDown {
 
     for (let i = 0; i < this._trails.length; i++) {
       const trail = this._trails[i];
-      trail.group.rotation.x = Math.PI * 0.5 + Math.sin(elapsed * 0.19 + i * 0.8) * 0.04;
       trail.mesh.material.opacity = 0.02 + eased * 0.09;
     }
 
@@ -128,15 +128,14 @@ export class ProxmoxDrillDown {
       const node = this._nodes[i];
       node.angle += delta * node.speed;
 
-      const x = center.x + Math.cos(node.angle) * node.orbitR;
-      const y = center.y + Math.sin(node.angle * 0.63 + node.phase) * node.orbitR * 0.22 * Math.sin(node.tilt);
-      const frontArc = 0.18 + 0.82 * (0.5 + 0.5 * Math.sin(node.angle + node.phase));
-      const z = center.z + frontArc * node.orbitR * 0.92;
+      const orbitOffset = node.orbitBasisA.clone().multiplyScalar(Math.cos(node.angle) * node.orbitR)
+        .add(node.orbitBasisB.clone().multiplyScalar(Math.sin(node.angle) * node.orbitR));
+      const pos = center.clone().add(orbitOffset);
       const pulse = node.resource.status === 'running'
         ? 1.0 + 0.10 * Math.sin(elapsed * 2.8 + i * 0.7)
         : 0.86 + 0.04 * Math.sin(elapsed * 1.6 + i * 0.9);
 
-      node.mesh.position.set(x, y, z);
+      node.mesh.position.copy(pos);
       node.mesh.scale.setScalar(pulse);
       node.mesh.rotation.x = elapsed * 0.6 + i * 0.2;
       node.mesh.rotation.y = elapsed * 0.35 + i * 0.4;
@@ -146,7 +145,7 @@ export class ProxmoxDrillDown {
       node.wire.rotation.copy(node.mesh.rotation);
 
       const beamPos = node.beamGeo.attributes.position;
-      beamPos.setXYZ(0, x, y, z);
+      beamPos.setXYZ(0, pos.x, pos.y, pos.z);
       beamPos.setXYZ(1, center.x, center.y, center.z);
       beamPos.needsUpdate = true;
       node.beam.material.opacity = (0.04 + 0.12 * eased) * (node.resource.status === 'running' ? 1 : 0.55);
@@ -223,6 +222,10 @@ export class ProxmoxDrillDown {
   }
 
   _clearResources() {
+    for (const node of this._nodes) {
+      this._angleByKey.set(this._resourceKey(node.resource), node.angle);
+    }
+
     for (const trail of this._trails) {
       this._group.remove(trail.group);
       trail.mesh.geometry.dispose();
@@ -249,14 +252,20 @@ export class ProxmoxDrillDown {
     this._clearResources();
     if (!resources.length) return;
 
-    const orbitBuckets = [...new Set(resources.map((_, index) => 2.0 + Math.floor(index / 2) * 0.62))];
-    orbitBuckets.forEach((orbitR, index) => this._addTrail(orbitR, index));
-
     resources.forEach((resource, index) => {
       const color = new THREE.Color(resourceColor(resource));
       const orbitR = 2.0 + Math.floor(index / 2) * 0.62;
       const tilt = (index % 2 === 0 ? 1 : -1) * (0.32 + Math.floor(index / 2) * 0.08);
       const speed = 0.30 - Math.floor(index / 2) * 0.02 + (resource._type === 'lxc' ? 0.03 : 0.0);
+      const orbitNormal = this._buildOrbitNormal(index, tilt);
+      const orbitBasisA = new THREE.Vector3(0, 1, 0).cross(orbitNormal);
+      if (orbitBasisA.lengthSq() < 0.0001) orbitBasisA.set(1, 0, 0);
+      orbitBasisA.normalize();
+      const orbitBasisB = new THREE.Vector3().crossVectors(orbitNormal, orbitBasisA).normalize();
+      const orbitQuat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        orbitNormal
+      );
       const geometry = resource._type === 'lxc'
         ? new THREE.OctahedronGeometry(0.16, 1)
         : new THREE.IcosahedronGeometry(0.18, 1);
@@ -298,6 +307,13 @@ export class ProxmoxDrillDown {
       document.body.appendChild(label);
       this._labels.push(label);
 
+      this._addTrail(orbitR, index, orbitQuat);
+
+      const key = this._resourceKey(resource);
+      const startAngle = this._angleByKey.has(key)
+        ? this._angleByKey.get(key)
+        : (index / resources.length) * Math.PI * 2;
+
       this._nodes.push({
         resource,
         mesh,
@@ -307,14 +323,17 @@ export class ProxmoxDrillDown {
         label,
         orbitR,
         tilt,
+        orbitNormal,
+        orbitBasisA,
+        orbitBasisB,
         speed,
-        angle: (index / resources.length) * Math.PI * 2,
+        angle: startAngle,
         phase: index * 0.7,
       });
     });
   }
 
-  _addTrail(orbitR, index) {
+  _addTrail(orbitR, index, orbitQuat) {
     const mesh = new THREE.Mesh(
       new THREE.RingGeometry(orbitR - 0.015, orbitR + 0.015, 128, 1),
       new THREE.MeshBasicMaterial({
@@ -326,10 +345,22 @@ export class ProxmoxDrillDown {
       })
     );
     const group = new THREE.Group();
-    group.rotation.x = Math.PI * 0.5;
+    group.quaternion.copy(orbitQuat);
     group.add(mesh);
     this._group.add(group);
     this._trails.push({ mesh, group });
+  }
+
+  _buildOrbitNormal(index, tilt) {
+    return new THREE.Vector3(
+      Math.sin(tilt) * 0.65,
+      0.85 + Math.sin(index * 0.7) * 0.12,
+      Math.cos(tilt + index * 0.35) * 0.42
+    ).normalize();
+  }
+
+  _resourceKey(resource) {
+    return `${resource._type}:${resource.vmid}`;
   }
 
   _updateLabel(node, eased) {

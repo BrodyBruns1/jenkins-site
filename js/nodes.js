@@ -20,12 +20,12 @@ import { openPanel } from './panels.js';
 // ── Service definitions ─────────────────────────────────────────────────────
 // Order is authoritative — matches SVC_INDEX in planet.js.
 const SERVICE_DEFS = [
-  { id: 'lmstudio', label: 'LM Studio', orbitR: 2.6,  speed: 0.30,  incl:  0.40, color: 0xff9940 },
-  { id: 'ollama',   label: 'Ollama',    orbitR: 2.0,  speed: 0.55,  incl: -0.30, color: 0x00d060 },
-  { id: 'litellm',  label: 'LiteLLM',  orbitR: 1.6,  speed: 0.80,  incl:  0.60, color: 0x10a0ff },
-  { id: 'proxmox',  label: 'Proxmox',  orbitR: 3.2,  speed: 0.22,  incl:  0.20, color: 0xff6020 },
-  { id: 'truenas',  label: 'TrueNAS',  orbitR: 3.7,  speed: 0.18,  incl: -0.50, color: 0x4060d0 },
-  { id: 'jellyfin', label: 'Jellyfin', orbitR: 4.1,  speed: 0.15,  incl:  0.35, color: 0x9050ff },
+  { id: 'lmstudio', label: 'LM Studio', orbitR: 2.9,  speed: 0.30,  incl:  0.40, color: 0xff9940 },
+  { id: 'ollama',   label: 'Ollama',    orbitR: 2.3,  speed: 0.55,  incl: -0.30, color: 0x00d060 },
+  { id: 'litellm',  label: 'LiteLLM',  orbitR: 1.9,  speed: 0.80,  incl:  0.60, color: 0x10a0ff },
+  { id: 'proxmox',  label: 'Proxmox',  orbitR: 3.5,  speed: 0.22,  incl:  0.20, color: 0xff6020 },
+  { id: 'truenas',  label: 'TrueNAS',  orbitR: 4.0,  speed: 0.18,  incl: -0.50, color: 0x4060d0 },
+  { id: 'jellyfin', label: 'Jellyfin', orbitR: 4.4,  speed: 0.15,  incl:  0.35, color: 0x9050ff },
 ];
 
 export class ServiceNodes {
@@ -45,9 +45,10 @@ export class ServiceNodes {
     this._fade       = 1.0;
     this._labelFade  = 1.0;
     this._interactive = true;
+    this._angleById  = new Map();
 
     this._nodes    = [];   // { mesh, wire, beamGeo, beamLine, labelEl, angle, status, metric, health }
-    this._angles   = SERVICE_DEFS.map((_, i) => (i / SERVICE_DEFS.length) * Math.PI * 2);
+    this._orbitTrails = [];
 
     this._build();
     this._subscribe();
@@ -65,6 +66,17 @@ export class ServiceNodes {
     for (let i = 0; i < SERVICE_DEFS.length; i++) {
       const def   = SERVICE_DEFS[i];
       const col3  = new THREE.Color(def.color);
+      const orbitNormal = this._buildOrbitNormal(i, def.incl);
+      const orbitBasisA = new THREE.Vector3(0, 1, 0).cross(orbitNormal);
+      if (orbitBasisA.lengthSq() < 0.0001) orbitBasisA.set(1, 0, 0);
+      orbitBasisA.normalize();
+      const orbitBasisB = new THREE.Vector3().crossVectors(orbitNormal, orbitBasisA).normalize();
+      const orbitQuat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        orbitNormal
+      );
+
+      this._addOrbitTrail(def.orbitR, def.color, orbitQuat);
 
       // Solid core
       const coreGeo = new THREE.IcosahedronGeometry(0.20, 1);
@@ -116,6 +128,8 @@ export class ServiceNodes {
       const node = {
         def, mesh, wire, beamGeo, beamLine, labelEl,
         health: 1.0, healthTarget: 1.0, status: 'pending', metric: '--',
+        orbitBasisA, orbitBasisB,
+        angle: (i / SERVICE_DEFS.length) * Math.PI * 2,
       };
 
       labelEl.addEventListener('click', (e) => {
@@ -159,6 +173,10 @@ export class ServiceNodes {
     const P = this._planetPos;
     const lk = Math.min(delta * 1.5, 1.0);
 
+    for (const trail of this._orbitTrails) {
+      trail.mesh.material.opacity = 0.16 * this._fade;
+    }
+
     for (let i = 0; i < this._nodes.length; i++) {
       const node = this._nodes[i];
       const def  = node.def;
@@ -168,20 +186,17 @@ export class ServiceNodes {
       node.health += (node.healthTarget - node.health) * lk;
 
       // Advance orbit angle
-      this._angles[i] += delta * def.speed;
-      const theta = this._angles[i];
-
-      // Elliptical orbit
-      const x = P.x + Math.cos(theta) * def.orbitR;
-      const y = P.y + Math.sin(theta * 0.47) * def.orbitR * 0.28 * Math.sin(def.incl);
-      const z = P.z + Math.sin(theta) * def.orbitR;
+      node.angle += delta * def.speed;
+      const orbitOffset = node.orbitBasisA.clone().multiplyScalar(Math.cos(node.angle) * def.orbitR)
+        .add(node.orbitBasisB.clone().multiplyScalar(Math.sin(node.angle) * def.orbitR));
+      const pos = P.clone().add(orbitOffset);
 
       // Position and pulse scale
       const pulse = node.health > 0.3
         ? 1.0 + 0.08 * Math.sin(elapsed * 3.0 + i * 1.05)
         : 1.0;
 
-      node.mesh.position.set(x, y, z);
+      node.mesh.position.copy(pos);
       node.mesh.scale.setScalar(pulse);
       node.wire.position.copy(node.mesh.position);
       node.wire.scale.copy(node.mesh.scale);
@@ -211,7 +226,7 @@ export class ServiceNodes {
 
       // Update health beam endpoints
       const bp = node.beamGeo.attributes.position;
-      bp.setXYZ(0, x, y, z);
+      bp.setXYZ(0, pos.x, pos.y, pos.z);
       bp.setXYZ(1, P.x, P.y, P.z);
       bp.needsUpdate = true;
       node.beamLine.material.opacity = (
@@ -220,9 +235,36 @@ export class ServiceNodes {
 
       // Update HTML label position
       if (this._camera) {
-        this._updateLabel(node, x, y, z);
+        this._updateLabel(node, pos.x, pos.y, pos.z);
       }
     }
+  }
+
+  _addOrbitTrail(orbitR, colorHex, orbitQuat) {
+    const mesh = new THREE.Mesh(
+      new THREE.RingGeometry(orbitR - 0.012, orbitR + 0.012, 96, 1),
+      new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.16,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
+    );
+    const tiltGroup = new THREE.Group();
+    tiltGroup.position.copy(this._planetPos);
+    tiltGroup.quaternion.copy(orbitQuat);
+    tiltGroup.add(mesh);
+    this._scene.add(tiltGroup);
+    this._orbitTrails.push({ mesh, tiltGroup });
+  }
+
+  _buildOrbitNormal(index, inclination) {
+    return new THREE.Vector3(
+      Math.sin(inclination) * 0.68,
+      0.86 + Math.sin(index * 0.8) * 0.12,
+      Math.cos(inclination + index * 0.45) * 0.40
+    ).normalize();
   }
 
   _updateLabel(node, wx, wy, wz) {
@@ -290,6 +332,9 @@ export class ServiceNodes {
 
   dispose() {
     for (const node of this._nodes) {
+      this._angleById.set(node.def.id, node.angle);
+    }
+    for (const node of this._nodes) {
       this._scene.remove(node.mesh, node.wire, node.beamLine);
       node.mesh.geometry.dispose();
       node.mesh.material.dispose();
@@ -298,6 +343,11 @@ export class ServiceNodes {
       node.beamGeo.dispose();
       node.beamLine.material.dispose();
       node.labelEl.remove();
+    }
+    for (const trail of this._orbitTrails) {
+      this._scene.remove(trail.tiltGroup);
+      trail.mesh.geometry.dispose();
+      trail.mesh.material.dispose();
     }
   }
 }

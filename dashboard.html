@@ -104,8 +104,17 @@
   <!-- Docker summary stats (visible on section 2) -->
   <div id="docker-summary"></div>
 
+  <!-- n8n quick-pass summary (visible on section 3) -->
+  <aside id="n8n-summary" aria-live="polite">
+    <div class="n8n-summary__eyebrow">Automation Orbit</div>
+    <div class="n8n-summary__title">n8n quick pass is live</div>
+    <div class="n8n-summary__body">Placeholder workflows are orbiting now so the fourth section feels alive while API auth is still being finished.</div>
+  </aside>
+
   <!-- Edit Groups button (visible on section 2) -->
   <button id="docker-edit-groups-btn">Edit Groups</button>
+
+  <div id="voice-bridge-status" data-state="idle">Voice bridge idle</div>
 
   <!-- Proxmox drill-down controls -->
   <button id="proxmox-back-btn" aria-label="Exit Proxmox drill-down">Back to Orbit</button>
@@ -244,6 +253,7 @@
     <div class="section-title" id="section-title-0">Mission Control</div>
     <div class="section-title" id="section-title-1">Homelab Services</div>
     <div class="section-title" id="section-title-2">Container Fleet</div>
+    <div class="section-title" id="section-title-3">Automation Orbit</div>
   </div>
 
   <!-- Section navigation dots -->
@@ -251,6 +261,7 @@
     <button class="section-dot active" data-section="0" aria-label="Section 1"></button>
     <button class="section-dot" data-section="1" aria-label="Section 2"></button>
     <button class="section-dot" data-section="2" aria-label="Section 3"></button>
+    <button class="section-dot" data-section="3" aria-label="Section 4"></button>
   </nav>
 
   <!-- Scroll track: makes body scrollable without content overflow -->

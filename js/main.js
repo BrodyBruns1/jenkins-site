@@ -27,6 +27,9 @@ import { closePanel, initPanels }      from './panels.js';
 import { DockerPlanet }                from './dockerPlanet.js';
 import { startDockerPolling, dockerEventBus } from './dockerApi.js';
 import { ProxmoxDrillDown }            from './proxmoxDrillDown.js';
+import { N8nPlanet }                   from './n8nPlanet.js';
+import { connectMissionControlSpeechBridge } from './sttBridge.js';
+import { STT_BRIDGE_CONFIG }           from '../config.js';
 
 // ── Renderer ────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('three-canvas');
@@ -106,30 +109,59 @@ nodes.setCamera(camera);
 
 // Docker planet (section 2 — replaces the old empty sister planet)
 const dockerPlanet = new DockerPlanet(scene, camera);
+const n8nPlanet = new N8nPlanet(scene, camera);
 
 // ── Scroll-driven camera track ──────────────────────────────────────────────
 const _lookTarget = new THREE.Vector3();
 const _manualLookTarget = new THREE.Vector3();
+const _baseOffset = new THREE.Vector3();
+const _rotatedOffset = new THREE.Vector3();
+const _orbitQuaternion = new THREE.Quaternion();
+const _yawQuaternion = new THREE.Quaternion();
+const _pitchQuaternion = new THREE.Quaternion();
+const _orbitRight = new THREE.Vector3();
 let _scrollProgress = 0;
 let _cameraMode = 'scroll';
 let _cameraTransition = null;
 let _drillDownBlend = 0;
+let _serviceLabelProximity = 0;
+let _dockerLabelProximity = 0;
+let _n8nLabelProximity = 0;
+let _orbitYaw = 0;
+let _orbitPitch = 0;
+let _dragState = null;
+let _suppressCanvasClick = false;
 
 const htmlEl = document.documentElement;
 const backBtn = document.getElementById('proxmox-back-btn');
+const dragSurface = document.getElementById('main-content');
 
 const WAYPOINTS = [
   { cam: new THREE.Vector3(0,     0,    20),  look: new THREE.Vector3(0,      0,    0   ) },
-  { cam: new THREE.Vector3(-8.5, -1.5,   3),  look: new THREE.Vector3(-8.5,  -5.0, -2.0) },
-  { cam: new THREE.Vector3(11.5, -1.5,   3),  look: new THREE.Vector3(11.5,  -5.0, -2.0) },
+  { cam: new THREE.Vector3(-8.5, -0.9,   4.4),  look: new THREE.Vector3(-8.5,  -5.0, -2.0) },
+  { cam: new THREE.Vector3(11.5, -0.75,  5.8),  look: new THREE.Vector3(11.5,  -5.0, -2.0) },
+  { cam: new THREE.Vector3(31.5, -0.65,  6.0),  look: new THREE.Vector3(31.5,  -5.1, -2.2) },
 ];
 
 function _updateCamera(p) {
   const pose = _getCameraPose(p);
-  camera.position.copy(pose.cam);
   _lookTarget.copy(pose.look);
-  camera.lookAt(_lookTarget);
+  _baseOffset.copy(pose.cam).sub(pose.look);
+  _rotatedOffset.copy(_baseOffset);
+
+  _yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), _orbitYaw);
+  _rotatedOffset.applyQuaternion(_yawQuaternion);
+
+  _orbitRight.crossVectors(_rotatedOffset, new THREE.Vector3(0, 1, 0)).normalize();
+  if (_orbitRight.lengthSq() > 0.0001) {
+    _pitchQuaternion.setFromAxisAngle(_orbitRight, _orbitPitch);
+    _rotatedOffset.applyQuaternion(_pitchQuaternion);
+  }
+
+  camera.position.copy(_lookTarget).add(_rotatedOffset);
+  camera.up.set(0, 1, 0);
   camera.updateProjectionMatrix();
+  camera.lookAt(_lookTarget);
 }
 
 function _getCameraPose(p) {
@@ -155,15 +187,22 @@ function _updateSectionUI(p) {
 
   // Show/hide Docker-specific UI when near section 2
   const dockerProximity = 1 - Math.min(Math.abs(p - 2), 1);
+  _dockerLabelProximity = Math.max(0, dockerProximity);
   const editBtn   = document.getElementById('docker-edit-groups-btn');
   const summaryEl = document.getElementById('docker-summary');
   if (editBtn)   editBtn.classList.toggle('visible', dockerProximity > 0.5);
   if (summaryEl) summaryEl.classList.toggle('visible', dockerProximity > 0.5);
 
+  const n8nSummary = document.getElementById('n8n-summary');
+  const n8nProximity = 1 - Math.min(Math.abs(p - 3), 1);
+  _n8nLabelProximity = Math.max(0, n8nProximity);
+  if (n8nSummary) n8nSummary.classList.toggle('visible', n8nProximity > 0.5);
+
   // Show/hide service cards when near section 1
   const svcCards = document.getElementById('service-cards');
   if (svcCards) {
     const svcProximity = 1 - Math.min(Math.abs(p - 1), 1);
+    _serviceLabelProximity = Math.max(0, svcProximity);
     svcCards.style.opacity = String(Math.max(0, svcProximity));
     svcCards.style.pointerEvents = svcProximity > 0.3 ? 'auto' : 'none';
   }
@@ -175,10 +214,52 @@ document.querySelectorAll('.section-dot').forEach((el, i) => {
     window.scrollTo({ top: i * window.innerHeight, behavior: 'smooth' }));
 });
 
-canvas.addEventListener('click', (e) => {
+function _isInteractiveTarget(target) {
+  return !!target.closest(
+    '.svc-label, .docker-label, .svc-card, .detail-panel, .panel-overlay, ' +
+    '#docker-edit-groups-btn, #docker-group-modal, #section-nav, #proxmox-back-btn, #proxmox-drilldown-hud'
+  );
+}
+
+dragSurface?.addEventListener('click', (e) => {
+  if (_suppressCanvasClick) {
+    _suppressCanvasClick = false;
+    return;
+  }
   if (_cameraMode !== 'scroll') return;
+  if (_isInteractiveTarget(e.target)) return;
   nodes.handlePointerClick(e.clientX, e.clientY);
 });
+
+dragSurface?.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || _cameraMode !== 'scroll') return;
+  if (_isInteractiveTarget(e.target)) return;
+  _dragState = { x: e.clientX, y: e.clientY, moved: false };
+  dragSurface.setPointerCapture?.(e.pointerId);
+});
+
+window.addEventListener('pointermove', (e) => {
+  if (!_dragState || _cameraMode !== 'scroll') return;
+  const dx = e.clientX - _dragState.x;
+  const dy = e.clientY - _dragState.y;
+  if (Math.abs(dx) + Math.abs(dy) < 2) return;
+
+  _dragState.moved = true;
+  _orbitYaw   -= dx * 0.0065;
+  _orbitPitch += dy * 0.0048;
+  _orbitPitch = THREE.MathUtils.clamp(_orbitPitch, -0.85, 0.85);
+  _dragState.x = e.clientX;
+  _dragState.y = e.clientY;
+});
+
+function _endDrag() {
+  if (!_dragState) return;
+  if (_dragState.moved) _suppressCanvasClick = true;
+  _dragState = null;
+}
+
+window.addEventListener('pointerup', _endDrag);
+window.addEventListener('pointercancel', _endDrag);
 
 backBtn?.addEventListener('click', () => _exitProxmoxDrillDown());
 window.addEventListener('keydown', (e) => {
@@ -233,6 +314,56 @@ window.addEventListener('mousemove', (e) => {
   const ny = -((e.clientY / window.innerHeight) * 2 - 1);
   reactor.setMouse(nx, ny);
 }, { passive: true });
+
+function _setSpeechActivity(detail = {}) {
+  rings.setSpeechActivity({
+    level: detail.level ?? detail.intensity ?? 0,
+    speaking: detail.speaking ?? true,
+    frequency: detail.frequency ?? detail.frequencyHz ?? 0,
+  });
+  core.setSpeechActivity({
+    level: detail.level ?? detail.intensity ?? 0,
+    speaking: detail.speaking ?? true,
+  });
+}
+
+function _streamLiveSpeech(detail = {}) {
+  const full = detail.fullText ?? detail.text ?? detail.chunk ?? '';
+  console.log('[STT→ring] full=%o', full);
+  core.streamLiveTranscript(full);
+}
+
+function _triggerSpeechResponse(detail = {}) {
+  const strength = (detail.strength ?? detail.level ?? 1) * 0.72;
+  core.triggerResponsePulse(strength, detail.text ?? '');
+  rings.triggerResponsePulse(strength * 0.82);
+  reactor.triggerSpeechResponse(strength);
+}
+
+window.addEventListener('mission-control-speech', (e) => {
+  _setSpeechActivity(e.detail || {});
+});
+
+window.addEventListener('mission-control-response', (e) => {
+  _triggerSpeechResponse(e.detail || {});
+});
+
+window.missionControlSpeech = {
+  setActivity(detail = {}) {
+    _setSpeechActivity(detail);
+  },
+  stream(detail = {}) {
+    _streamLiveSpeech(detail);
+  },
+  stop() {
+    _setSpeechActivity({ level: 0, speaking: false });
+  },
+  respond(strength = 1, text = '') {
+    _triggerSpeechResponse({ strength, text });
+  },
+};
+
+connectMissionControlSpeechBridge(STT_BRIDGE_CONFIG);
 
 // ── Resize ──────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => {
@@ -368,9 +499,12 @@ function _updateSceneFocus() {
   rings.setFade(sceneFade);
   planet.setFade(sceneFade);
   dockerPlanet.setFade(sceneFade);
+  n8nPlanet.setFade(sceneFade);
 
   nodes.setFade(Math.max(sceneFade, 0.12));
-  nodes.setLabelFade(Math.max(sceneFade, 0.0));
+  nodes.setLabelFade(Math.max(sceneFade * _serviceLabelProximity, 0.0));
+  dockerPlanet.setLabelFade(Math.max(sceneFade * _dockerLabelProximity, 0.0));
+  n8nPlanet.setLabelFade(Math.max(sceneFade * _n8nLabelProximity, 0.0));
   reactor.setVisible(sceneFade > 0.18);
 }
 
@@ -397,10 +531,13 @@ function animate() {
 
   reactor.update(elapsed);
   rings.update(elapsed, delta);
+  reactor.setSpeechEllipses(rings.getSpeechContours());
   core.update(elapsed, delta);
+  reactor.setImpactBursts(core.getGlyphCollisionBursts());
   planet.update(elapsed, delta);
   nodes.update(elapsed, delta);
   dockerPlanet.update(elapsed, delta);
+  n8nPlanet.update(elapsed, delta);
   proxmoxDrillDown.update(elapsed, delta);
 
   _animateRings(elapsed);

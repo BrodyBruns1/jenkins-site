@@ -59,6 +59,7 @@ export class DockerPlanet {
     this._scene  = scene;
     this._camera = camera;
     this._fade   = 1.0;
+    this._labelFade = 1.0;
 
     this._group = new THREE.Group();
     this._group.position.set(11.5, -5.0, -2.0);
@@ -67,6 +68,7 @@ export class DockerPlanet {
     this._nodes       = [];  // { mesh, wire, beamGeo, beamLine, label, container, angle, ... }
     this._netRings    = [];  // { mesh, tiltGroup, baseTilt }
     this._orbitTrails = [];  // faint ring per group
+    this._angleById   = new Map();
 
     this._buildPlanet();
     this._buildLight();
@@ -75,6 +77,10 @@ export class DockerPlanet {
 
   setFade(fade) {
     this._fade = THREE.MathUtils.clamp(fade, 0, 1);
+  }
+
+  setLabelFade(fade) {
+    this._labelFade = THREE.MathUtils.clamp(fade, 0, 1);
   }
 
   // ── Planet ─────────────────────────────────────────────────────────────
@@ -132,6 +138,7 @@ export class DockerPlanet {
   _rebuildContainers(containers, groups) {
     // Dispose previous
     for (const n of this._nodes) {
+      this._angleById.set(n.container.id, n.angle);
       this._scene.remove(n.mesh, n.wire, n.beamLine);
       n.mesh.geometry.dispose(); n.mesh.material.dispose();
       n.wire.geometry.dispose(); n.wire.material.dispose();
@@ -154,16 +161,27 @@ export class DockerPlanet {
       const speed      = 0.28 - gIdx * 0.025;
       const incl       = (gIdx % 2 === 0 ? 1 : -1) * (0.18 + gIdx * 0.07);
       const accentHex  = GROUP_ACCENT[gIdx % GROUP_ACCENT.length];
+      const orbitNormal = this._buildOrbitNormal(gIdx, incl);
+      const orbitBasisA = new THREE.Vector3(0, 1, 0).cross(orbitNormal);
+      if (orbitBasisA.lengthSq() < 0.0001) orbitBasisA.set(1, 0, 0);
+      orbitBasisA.normalize();
+      const orbitBasisB = new THREE.Vector3().crossVectors(orbitNormal, orbitBasisA).normalize();
+      const orbitQuat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        orbitNormal
+      );
 
       // Faint orbit trail ring
-      this._addOrbitTrail(orbitR, accentHex, incl);
+      this._addOrbitTrail(orbitR, accentHex, orbitQuat);
 
       for (let ci = 0; ci < members.length; ci++) {
         const c     = members[ci];
         const sk    = statusKey(c);
         const color = new THREE.Color(STATUS_COLORS[sk] || 0x666666);
         const alive = c.state === 'running';
-        const angle = (ci / members.length) * Math.PI * 2;
+        const angle = this._angleById.has(c.id)
+          ? this._angleById.get(c.id)
+          : (ci / Math.max(members.length, 1)) * Math.PI * 2;
 
         // Box
         const boxGeo = new THREE.BoxGeometry(0.14, 0.14, 0.14);
@@ -211,14 +229,14 @@ export class DockerPlanet {
         this._nodes.push({
           mesh, wire, beamGeo, beamLine, label,
           container: c, angle, orbitR, speed, incl,
-          alive, statusKey: sk,
+          alive, statusKey: sk, orbitBasisA, orbitBasisB,
         });
       }
       gIdx++;
     }
   }
 
-  _addOrbitTrail(orbitR, colorHex, inclination) {
+  _addOrbitTrail(orbitR, colorHex, orbitQuat) {
     const geo = new THREE.RingGeometry(orbitR - 0.015, orbitR + 0.015, 128, 1);
     const mat = new THREE.MeshBasicMaterial({
       color: colorHex, transparent: true, opacity: 0.07,
@@ -227,12 +245,19 @@ export class DockerPlanet {
     const mesh = new THREE.Mesh(geo, mat);
 
     const tiltGroup = new THREE.Group();
-    // Lay flat in the orbital plane -- tilted slightly by inclination
-    tiltGroup.rotation.x = Math.PI * 0.5 + inclination * 0.35;
+    tiltGroup.quaternion.copy(orbitQuat);
     tiltGroup.add(mesh);
     this._group.add(tiltGroup);
 
     this._orbitTrails.push({ mesh, tiltGroup });
+  }
+
+  _buildOrbitNormal(groupIndex, inclination) {
+    return new THREE.Vector3(
+      Math.sin(inclination) * 0.62,
+      0.88 + Math.sin(groupIndex * 0.75) * 0.10,
+      Math.cos(inclination + groupIndex * 0.4) * 0.38
+    ).normalize();
   }
 
   // ── Network rings (perpendicular Saturn bands) ────────────────────────
@@ -303,17 +328,15 @@ export class DockerPlanet {
 
     for (const n of this._nodes) {
       n.angle += delta * n.speed;
-      const theta = n.angle;
-
-      const x = P.x + Math.cos(theta) * n.orbitR;
-      const y = P.y + Math.sin(theta * 0.50) * n.orbitR * 0.26 * Math.sin(n.incl);
-      const z = P.z + Math.sin(theta) * n.orbitR;
+      const orbitOffset = n.orbitBasisA.clone().multiplyScalar(Math.cos(n.angle) * n.orbitR)
+        .add(n.orbitBasisB.clone().multiplyScalar(Math.sin(n.angle) * n.orbitR));
+      const pos = P.clone().add(orbitOffset);
 
       const pulse = n.alive
         ? 1.0 + 0.10 * Math.sin(elapsed * 2.8 + n.angle * 3)
         : 0.82;
 
-      n.mesh.position.set(x, y, z);
+      n.mesh.position.copy(pos);
       n.mesh.scale.setScalar(pulse);
       n.mesh.rotation.x = elapsed * 0.55;
       n.mesh.rotation.y = elapsed * 0.38;
@@ -324,7 +347,7 @@ export class DockerPlanet {
 
       // Beam
       const bp = n.beamGeo.attributes.position;
-      bp.setXYZ(0, x, y, z);
+      bp.setXYZ(0, pos.x, pos.y, pos.z);
       bp.setXYZ(1, P.x, P.y, P.z);
       bp.needsUpdate = true;
       n.beamLine.material.opacity = n.alive
@@ -335,7 +358,7 @@ export class DockerPlanet {
       n.beamLine.material.opacity *= this._fade;
 
       // Label
-      if (this._camera) this._updateLabel(n, x, y, z);
+      if (this._camera) this._updateLabel(n, pos.x, pos.y, pos.z);
     }
   }
 
@@ -355,10 +378,10 @@ export class DockerPlanet {
       return;
     }
 
-    node.label.style.opacity  = String((node.alive ? 0.90 : 0.74) * this._fade);
+    node.label.style.opacity  = String((node.alive ? 0.90 : 0.74) * this._fade * this._labelFade);
     node.label.style.left     = `${px}px`;
     node.label.style.top      = `${py}px`;
-    node.label.style.pointerEvents = this._fade > 0.08 ? 'auto' : 'none';
+    node.label.style.pointerEvents = this._fade > 0.08 && this._labelFade > 0.08 ? 'auto' : 'none';
   }
 
   get position() { return this._group.position; }
