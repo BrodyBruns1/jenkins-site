@@ -8,9 +8,12 @@ import { getMemorySnapshot, memoryEventBus } from './memoryApi.js';
 const PANEL_COUNT = 12;
 const PANEL_CANVAS_WIDTH = 512;
 const PANEL_CANVAS_HEIGHT = 320;
-const PANEL_RADIUS = 1.92;
+const PANEL_RADIUS = 1.52;
 const TORUS_MAJOR_RADIUS = 3.08;
 const TORUS_TUBE_RADIUS = 1.18;
+const PANEL_WIDTH = 1.08;
+const PANEL_HEIGHT = 0.70;
+const CONDUIT_OFFSET = new THREE.Vector3(0.68, -0.16, -0.92);
 const PANEL_TITLES = [
   'Jenkins Jobs',
   'Proxmox Nodes',
@@ -182,11 +185,11 @@ export class CommandRing {
     }
 
     if (this._conduitMaterial) {
-      this._conduitMaterial.opacity = 0.22 * this._fade;
+      this._conduitMaterial.opacity = 0.12 * this._fade;
     }
 
     if (this._conduitPointsMaterial) {
-      this._conduitPointsMaterial.opacity = 0.82 * this._fade;
+      this._conduitPointsMaterial.opacity = 0.34 * this._fade;
     }
 
     if (this._group) {
@@ -251,7 +254,7 @@ export class CommandRing {
   }
 
   _buildPanels() {
-    const panelGeometry = new THREE.PlaneGeometry(0.92, 0.58, 1, 1);
+    const panelGeometry = new THREE.PlaneGeometry(PANEL_WIDTH, PANEL_HEIGHT, 1, 1);
 
     for (let i = 0; i < PANEL_COUNT; i += 1) {
       const canvas = document.createElement('canvas');
@@ -317,6 +320,7 @@ export class CommandRing {
       new THREE.TubeGeometry(curve, 48, 0.05, 12, false),
       this._conduitMaterial
     );
+    this._conduit.position.copy(CONDUIT_OFFSET);
     this._group.add(this._conduit);
 
     const particleCount = 180;
@@ -340,6 +344,7 @@ export class CommandRing {
       depthWrite: false,
     });
     this._conduitPoints = new THREE.Points(this._conduitParticleGeometry, this._conduitPointsMaterial);
+    this._conduitPoints.position.copy(CONDUIT_OFFSET);
     this._group.add(this._conduitPoints);
   }
 
@@ -467,6 +472,8 @@ export class CommandRing {
     this._conduitMaterial.color.lerp(hue, 1 - Math.exp(-delta * 4.0));
     this._conduitPointsMaterial.color.lerp(hue, 1 - Math.exp(-delta * 5.0));
     this._conduit.rotation.y = elapsed * 0.08;
+    this._conduit.position.copy(CONDUIT_OFFSET);
+    this._conduitPoints.position.copy(CONDUIT_OFFSET);
 
     for (let i = 0; i < this._conduitParticleY.length; i += 1) {
       this._conduitParticleY[i] += speed * delta;
