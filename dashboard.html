@@ -107,8 +107,25 @@
   <!-- n8n quick-pass summary (visible on section 3) -->
   <aside id="n8n-summary" aria-live="polite">
     <div class="n8n-summary__eyebrow">Automation Orbit</div>
-    <div class="n8n-summary__title">n8n quick pass is live</div>
-    <div class="n8n-summary__body">Placeholder workflows are orbiting now so the fourth section feels alive while API auth is still being finished.</div>
+    <div class="n8n-summary__title">n8n orbit is standing by</div>
+    <div class="n8n-summary__body">The dashboard now tries the live n8n API first and falls back to a generated snapshot of the real automation seed pack when proxy auth is still missing.</div>
+    <div class="summary-meta" id="n8n-summary-meta"></div>
+    <div class="n8n-summary__sources" id="n8n-summary-sources"></div>
+    <div class="n8n-summary__workflows" id="n8n-summary-workflows"></div>
+    <div class="n8n-summary__targets" id="n8n-summary-targets"></div>
+    <div class="n8n-summary__ideas" id="n8n-summary-ideas"></div>
+  </aside>
+
+  <!-- Memory stack summary (visible on section 4) -->
+  <aside id="memory-summary" aria-live="polite">
+    <div class="memory-summary__eyebrow">Memory Constellation</div>
+    <div class="memory-summary__title">Seven layers are linked</div>
+    <div class="memory-summary__body">A new orbit maps Claude rules, rolling session state, the shared Logseq vault, and the Valkey/Qdrant sync path across Proxmox, VM105, and TrueNAS.</div>
+    <div class="summary-meta" id="memory-summary-meta"></div>
+    <div class="memory-summary__sources" id="memory-summary-sources"></div>
+    <div class="memory-summary__layers" id="memory-summary-layers"></div>
+    <div class="memory-summary__docs" id="memory-summary-docs"></div>
+    <div class="memory-summary__notes" id="memory-summary-notes"></div>
   </aside>
 
   <!-- Edit Groups button (visible on section 2) -->
@@ -119,6 +136,25 @@
   <!-- Proxmox drill-down controls -->
   <button id="proxmox-back-btn" aria-label="Exit Proxmox drill-down">Back to Orbit</button>
   <aside id="proxmox-drilldown-hud" aria-live="polite"></aside>
+  <aside id="command-ring-hud" aria-live="polite">
+    <div class="command-ring-hud__eyebrow">Command Ring</div>
+    <div class="command-ring-hud__title">Galahad Command Center</div>
+    <div class="command-ring-hud__body">Fly inside the HoloCore to inspect Jenkins, queue state, voice traffic, and the broader Mission Control feed.</div>
+    <div class="command-ring-hud__chips" id="command-ring-summary"></div>
+    <div class="command-ring-hud__queue" id="command-ring-queue"></div>
+    <div class="command-ring-hud__hint">Press <kbd>R</kbd> or click the HoloCore to enter. Drag to orbit once inside.</div>
+  </aside>
+  <aside id="command-ring-hitl" aria-live="polite">
+    <div class="command-ring-hitl__eyebrow">HITL Approval</div>
+    <div class="command-ring-hitl__title" id="command-ring-hitl-title">No approval waiting</div>
+    <div class="command-ring-hitl__question" id="command-ring-hitl-question">When Jenkins exposes a pending input step, it will appear here with dashboard-side approve and reject controls.</div>
+    <div class="command-ring-hitl__meta" id="command-ring-hitl-meta"></div>
+    <div class="command-ring-hitl__actions">
+      <button type="button" class="command-ring-hitl__action" id="command-ring-hitl-approve">Approve</button>
+      <button type="button" class="command-ring-hitl__action is-secondary" id="command-ring-hitl-reject">Reject</button>
+    </div>
+    <div class="command-ring-hitl__status" id="command-ring-hitl-status"></div>
+  </aside>
 
   <!--
     Detail panel overlay backdrop (outside overlay-root so pointer-events work).
@@ -254,14 +290,16 @@
     <div class="section-title" id="section-title-1">Homelab Services</div>
     <div class="section-title" id="section-title-2">Container Fleet</div>
     <div class="section-title" id="section-title-3">Automation Orbit</div>
+    <div class="section-title" id="section-title-4">Memory Constellation</div>
   </div>
 
   <!-- Section navigation dots -->
   <nav id="section-nav" aria-label="Sections">
-    <button class="section-dot active" data-section="0" aria-label="Section 1"></button>
-    <button class="section-dot" data-section="1" aria-label="Section 2"></button>
-    <button class="section-dot" data-section="2" aria-label="Section 3"></button>
-    <button class="section-dot" data-section="3" aria-label="Section 4"></button>
+    <button class="section-dot active" data-section="0" aria-label="Mission Control"></button>
+    <button class="section-dot" data-section="1" aria-label="Homelab Services"></button>
+    <button class="section-dot" data-section="2" aria-label="Container Fleet"></button>
+    <button class="section-dot" data-section="3" aria-label="Automation Orbit"></button>
+    <button class="section-dot" data-section="4" aria-label="Memory Constellation"></button>
   </nav>
 
   <!-- Scroll track: makes body scrollable without content overflow -->

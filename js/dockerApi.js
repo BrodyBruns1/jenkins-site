@@ -122,12 +122,13 @@ function parseContainer(c) {
 function computeGroups(containers) {
   const custom = JSON.parse(localStorage.getItem('docker-groups') || 'null');
 
-  if (custom) {
+  if (custom && typeof custom === 'object' && !Array.isArray(custom)) {
     const groups   = {};
     const assigned = new Set();
     for (const [gName, members] of Object.entries(custom)) {
-      groups[gName] = containers.filter(c => members.includes(c.name));
-      members.forEach(n => assigned.add(n));
+      const memberList = Array.isArray(members) ? members : [];
+      groups[gName] = containers.filter(c => memberList.includes(c.name));
+      memberList.forEach(n => assigned.add(n));
     }
     const rest = containers.filter(c => !assigned.has(c.name));
     if (rest.length) groups.ungrouped = rest;

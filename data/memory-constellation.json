@@ -1,0 +1,405 @@
+{
+  "schemaVersion": 1,
+  "mode": "generated",
+  "generatedAt": "2026-03-21T21:28:50Z",
+  "overview": {
+    "layers": "7 live layers",
+    "workspace": "/mnt/llm-memory/proxmox/memory",
+    "storage": "/mnt/llm-memory",
+    "services": "VM105: Valkey + Qdrant",
+    "supportDocs": 2,
+    "latestLayerUpdate": "2026-03-20T10:49:57Z",
+    "indexedDocs": 21,
+    "noteCount": 5
+  },
+  "anchors": [
+    {
+      "id": "proxmox",
+      "name": "Proxmox Host",
+      "status": "hooks + orchestration",
+      "tone": "stable",
+      "host": "10.201.52.200",
+      "path": "/mnt/llm-memory/proxmox/memory"
+    },
+    {
+      "id": "vm105",
+      "name": "VM 105",
+      "status": "Valkey synced + Qdrant synced",
+      "tone": "synced",
+      "host": "10.201.52.171",
+      "path": "/mnt/llm-memory/vm105"
+    },
+    {
+      "id": "truenas",
+      "name": "TrueNAS",
+      "status": "/mnt/llm-memory",
+      "tone": "storage",
+      "host": "10.201.52.170",
+      "path": "/mnt/llm-memory"
+    },
+    {
+      "id": "vault",
+      "name": "Logseq Vault",
+      "status": "5 recent note(s)",
+      "tone": "active",
+      "host": "",
+      "path": "/mnt/llm-memory/logseq-vault"
+    }
+  ],
+  "layers": [
+    {
+      "id": "claude",
+      "name": "CLAUDE.md",
+      "path": "/root/CLAUDE.md",
+      "kind": "identity",
+      "tone": "stable",
+      "anchors": [
+        "proxmox"
+      ],
+      "status": "stable rules",
+      "summary": "Permanent operating rules for action-first, concise, durable-note sessions.",
+      "sourcePath": "/root/CLAUDE.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T06:15:26Z",
+      "metrics": [
+        "4 working-style rules",
+        "7 memory-workflow rules"
+      ]
+    },
+    {
+      "id": "primary",
+      "name": "PRIMARY.md",
+      "path": "/mnt/llm-memory/proxmox/memory/PRIMARY.md",
+      "kind": "runtime",
+      "tone": "bridge",
+      "anchors": [
+        "proxmox"
+      ],
+      "status": "rolling state",
+      "summary": "Active project: Check recent Logseq vault entries",
+      "detail": "Done. Here's what was written/updated: **New files:** - [reference_ssh_access.md](-/memory/reference_ssh_access.md) \u2014 full SSH guide: every host, key, sudo setup, True...",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/PRIMARY.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T10:49:57Z",
+      "metrics": [
+        "1 next-step item(s)",
+        "2 blocker(s)"
+      ]
+    },
+    {
+      "id": "memory-sh",
+      "name": "memory.sh",
+      "path": "/mnt/llm-memory/proxmox/memory/memory.sh",
+      "kind": "runtime",
+      "tone": "bridge",
+      "anchors": [
+        "proxmox"
+      ],
+      "status": "session start",
+      "summary": "SessionStart hook injects the seven-layer stack plus live git context into new sessions.",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/memory.sh",
+      "exists": true,
+      "lastUpdated": "2026-03-20T06:39:03Z",
+      "metrics": [
+        "7 printed layers",
+        "mount guard active",
+        "structured index included"
+      ]
+    },
+    {
+      "id": "hindsight",
+      "name": "HINDSIGHT.md",
+      "path": "/mnt/llm-memory/proxmox/memory/HINDSIGHT.md",
+      "kind": "identity",
+      "tone": "stable",
+      "anchors": [
+        "proxmox"
+      ],
+      "status": "durable patterns",
+      "summary": "The user expects durable notes. Important findings should be written into markdown memory files, not left only in chat.",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/HINDSIGHT.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T10:49:57Z",
+      "metrics": [
+        "8 recent transcript(s)",
+        "4 stable pattern(s)"
+      ]
+    },
+    {
+      "id": "logseq",
+      "name": "LOGSEQ.md",
+      "path": "/mnt/llm-memory/proxmox/memory/LOGSEQ.md",
+      "kind": "storage",
+      "tone": "active",
+      "anchors": [
+        "vault",
+        "truenas"
+      ],
+      "status": "active (/mnt/llm-memory/logseq-vault)",
+      "summary": "Shared vault at /mnt/llm-memory/logseq-vault with 5 recent note(s) indexed.",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/LOGSEQ.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T10:49:57Z",
+      "metrics": [
+        "5 indexed note(s)",
+        "/mnt/llm-memory/logseq-vault"
+      ]
+    },
+    {
+      "id": "valkey",
+      "name": "VALKEY.md",
+      "path": "/mnt/llm-memory/proxmox/memory/VALKEY.md",
+      "kind": "storage",
+      "tone": "synced",
+      "anchors": [
+        "vm105",
+        "truenas"
+      ],
+      "status": "synced",
+      "summary": "Synced queue and skill snapshots to Valkey at `10.201.52.171:6379`.",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/VALKEY.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T10:49:57Z",
+      "metrics": [
+        "12 queued task(s)",
+        "7 tracked skill(s)"
+      ]
+    },
+    {
+      "id": "qdrant",
+      "name": "QDRANT.md",
+      "path": "/mnt/llm-memory/proxmox/memory/QDRANT.md",
+      "kind": "storage",
+      "tone": "synced",
+      "anchors": [
+        "vm105",
+        "truenas"
+      ],
+      "status": "synced",
+      "summary": "Synced `22` vector points to Qdrant collection `claude_memory` at `10.201.52.171:6333`.",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/QDRANT.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T08:14:55Z",
+      "metrics": [
+        "22 vector doc(s)",
+        "768 dimensions",
+        "ollama:nomic-embed-text:latest"
+      ]
+    }
+  ],
+  "supportingDocs": [
+    {
+      "id": "memory-index",
+      "name": "MEMORY.md",
+      "kind": "index",
+      "status": "structured index",
+      "summary": "Indexes 21 linked docs across 5 sections.",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/MEMORY.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T10:47:54Z",
+      "metrics": [
+        "21 linked docs"
+      ],
+      "documents": [
+        {
+          "section": "Runtime Memory",
+          "name": "PRIMARY.md",
+          "target": "PRIMARY.md",
+          "summary": "rolling session state rewritten at session end"
+        },
+        {
+          "section": "Runtime Memory",
+          "name": "HINDSIGHT.md",
+          "target": "HINDSIGHT.md",
+          "summary": "behavioral guidance distilled from recent sessions"
+        },
+        {
+          "section": "Runtime Memory",
+          "name": "LOGSEQ.md",
+          "target": "LOGSEQ.md",
+          "summary": "Logseq-compatible vault summary and storage status"
+        },
+        {
+          "section": "Runtime Memory",
+          "name": "VALKEY.md",
+          "target": "VALKEY.md",
+          "summary": "operational memory snapshot for tasks, recurrent tool usage, and self-improvement signals"
+        },
+        {
+          "section": "Runtime Memory",
+          "name": "QDRANT.md",
+          "target": "QDRANT.md",
+          "summary": "vector-memory status, similar-issue clusters, and Qdrant sync state"
+        },
+        {
+          "section": "Runtime Memory",
+          "name": "MEMORY_SYSTEM.md",
+          "target": "MEMORY_SYSTEM.md",
+          "summary": "seven-layer memory architecture and hook wiring"
+        },
+        {
+          "section": "User",
+          "name": "user_profile.md",
+          "target": "user_profile.md",
+          "summary": "homelab owner, Docker/Proxmox, builds Three.js 3D dashboards"
+        },
+        {
+          "section": "Project",
+          "name": "project_jenkins_dashboard.md",
+          "target": "project_jenkins_dashboard.md",
+          "summary": "Three.js 3D homelab dashboard (Mission Control): file structure, scene layout, Docker planet, scroll system, proxy routes, pending phases"
+        },
+        {
+          "section": "Project",
+          "name": "project_jenkins_dashboard_roadmap.md",
+          "target": "project_jenkins_dashboard_roadmap.md",
+          "summary": "implementation roadmap for upcoming dashboard phases: Proxmox drill-down, container live stats, and n8n planet"
+        },
+        {
+          "section": "Project",
+          "name": "project_jenkins_dashboard_voice_reactivity.md",
+          "target": "project_jenkins_dashboard_voice_reactivity.md",
+          "summary": "speech-to-text integration notes for the center Mission Control core: live speech pulses, response bursts, and event contract"
+        },
+        {
+          "section": "Project",
+          "name": "project_docker1_n8n.md",
+          "target": "project_docker1_n8n.md",
+          "summary": "n8n installation on VM 105 (Docker1)"
+        },
+        {
+          "section": "Project",
+          "name": "project_stt_popup.md",
+          "target": "project_stt_popup.md",
+          "summary": "STT Popup Electron app: canonical source/build on VM 105 at /opt/stt-popup-repo, root host keeps distributable artifacts only"
+        },
+        {
+          "section": "Feedback",
+          "name": "feedback_dashboard_deployment.md",
+          "target": "feedback_dashboard_deployment.md",
+          "summary": "www/ files are root-owned, deploy via docker volume mount; hard-refresh after JS deploys; avoid large inline b64"
+        },
+        {
+          "section": "Feedback",
+          "name": "feedback_ssh_username.md",
+          "target": "feedback_ssh_username.md",
+          "summary": "correct SSH username for VM 105 is brody"
+        },
+        {
+          "section": "Reference",
+          "name": "reference_ssh_access.md",
+          "target": "reference_ssh_access.md",
+          "summary": "complete SSH guide: all host IPs, users, keys, sudo setup, bootstrap commands, TrueNAS quirks"
+        },
+        {
+          "section": "Reference",
+          "name": "reference_homelab_vms.md",
+          "target": "reference_homelab_vms.md",
+          "summary": "VM inventory: IPs, OS, roles, QEMU agent status, MAC\u2192IP mapping"
+        },
+        {
+          "section": "Reference",
+          "name": "reference_truenas_api.md",
+          "target": "reference_truenas_api.md",
+          "summary": "TrueNAS SCALE API key and SSH info for VM 102 at 10.201.52.170"
+        },
+        {
+          "section": "Reference",
+          "name": "reference_homelab_docs.md",
+          "target": "reference_homelab_docs.md",
+          "summary": "location of homelab infrastructure docs (/root/homelab-docs/)"
+        },
+        {
+          "section": "Reference",
+          "name": "reference_llm_memory_storage.md",
+          "target": "reference_llm_memory_storage.md",
+          "summary": "Proxmox host orchestration with TrueNAS-backed storage and VM105 service placement"
+        },
+        {
+          "section": "Reference",
+          "name": "reference_llm_memory_handoff.md",
+          "target": "reference_llm_memory_handoff.md",
+          "summary": "full handoff of the current memory-stack buildout, live state, safeguards, and remaining manual tasks"
+        },
+        {
+          "section": "Reference",
+          "name": "reference_codex_memory_validation.md",
+          "target": "reference_codex_memory_validation.md",
+          "summary": "repeatable procedure for testing shared memory-layer health and Codex vault read/write access"
+        }
+      ]
+    },
+    {
+      "id": "memory-system",
+      "name": "MEMORY_SYSTEM.md",
+      "kind": "architecture",
+      "status": "seven-layer map",
+      "summary": "Defines the seven-layer architecture, hook wiring, host roles, and storage layout behind the constellation.",
+      "sourcePath": "/mnt/llm-memory/proxmox/memory/MEMORY_SYSTEM.md",
+      "exists": true,
+      "lastUpdated": "2026-03-20T07:12:56Z",
+      "metrics": [
+        "6 named layer/hook items"
+      ],
+      "hooks": [
+        "`SessionStart` runs `memory.sh`",
+        "`SessionEnd` runs `refresh_memory.py`"
+      ]
+    }
+  ],
+  "recentNotes": [
+    {
+      "id": "Codex Vault Test.md",
+      "path": "Codex Vault Test.md",
+      "title": "Codex Vault Test",
+      "preview": "Codex Vault Test",
+      "modifiedAt": "2026-03-20T08:13:44Z",
+      "label": "Codex Vault Test.md - Codex Vault Test"
+    },
+    {
+      "id": "journals__2026_03_20.md",
+      "path": "journals/2026_03_20.md",
+      "title": "-",
+      "preview": "-",
+      "modifiedAt": "2026-03-20T07:46:36Z",
+      "label": "journals/2026_03_20.md - -"
+    },
+    {
+      "id": "Claude Memory Behavior Cheat Sheet.md",
+      "path": "Claude Memory Behavior Cheat Sheet.md",
+      "title": "Claude Memory Behavior Cheat Sheet",
+      "preview": "Claude Memory Behavior Cheat Sheet",
+      "modifiedAt": "2026-03-20T07:44:16Z",
+      "label": "Claude Memory Behavior Cheat Sheet.md - Claude Memory Behavior Cheat Sheet"
+    },
+    {
+      "id": "pages__contents.md",
+      "path": "pages/contents.md",
+      "title": "-",
+      "preview": "-",
+      "modifiedAt": "2026-03-20T07:23:24Z",
+      "label": "pages/contents.md - -"
+    },
+    {
+      "id": "Memory Graph.md",
+      "path": "Memory Graph.md",
+      "title": "Memory Graph",
+      "preview": "Memory Graph",
+      "modifiedAt": "2026-03-20T06:36:44Z",
+      "label": "Memory Graph.md - Memory Graph"
+    }
+  ],
+  "stats": {
+    "layerCount": 7,
+    "anchorCount": 4,
+    "supportDocCount": 2,
+    "recentNoteCount": 5,
+    "indexedDocCount": 21
+  },
+  "sourcePaths": {
+    "claude": "/root/CLAUDE.md",
+    "workspace": "/mnt/llm-memory/proxmox/memory",
+    "storage": "/mnt/llm-memory",
+    "vault": "/mnt/llm-memory/logseq-vault"
+  }
+}

@@ -600,7 +600,7 @@
 /* -- Scroll-track and section navigation ----------------------------------- */
 
 #scroll-track {
-  height: 300vh;
+  height: calc(var(--section-count, 1) * 100vh);
   width: 1px;
   position: absolute;
   top: 0;

@@ -403,8 +403,9 @@ function _renderGroupEditor() {
 
   // Build current assignment map: containerName → groupName
   const assignments = {};
-  if (custom) {
+  if (custom && typeof custom === 'object' && !Array.isArray(custom)) {
     for (const [gName, members] of Object.entries(custom)) {
+      if (!Array.isArray(members)) continue;
       for (const name of members) assignments[name] = gName;
     }
   } else {

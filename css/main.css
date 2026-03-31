@@ -1,7 +1,10 @@
 /* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root { --section-count: 1; }
 html { background: #000; }
 html.drilldown-active,
+html.command-ring-active,
+html.command-ring-active body,
 html.drilldown-active body { overflow: hidden; }
 body { width: 100%; min-height: 100vh; background: #000; }
 
@@ -140,8 +143,11 @@ body { width: 100%; min-height: 100vh; background: #000; }
 /* -- Scroll-track and section navigation ----------------------------------- */
 
 #scroll-track {
-  height: 400vh;
+  height: calc(var(--section-count, 1) * 100vh);
   width: 1px;
+  position: absolute;
+  top: 0;
+  left: 0;
   pointer-events: none;
   z-index: -1;
 }
@@ -199,7 +205,9 @@ body { width: 100%; min-height: 100vh; background: #000; }
 .section-dot.active { background: rgba(255, 255, 255, 0.80); transform: scale(1.4); }
 
 #proxmox-back-btn,
-#proxmox-drilldown-hud {
+#proxmox-drilldown-hud,
+#command-ring-hud,
+#command-ring-hitl {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.28s ease, transform 0.28s ease;
@@ -255,32 +263,233 @@ html.drilldown-active #section-titles,
 html.drilldown-active #service-cards,
 html.drilldown-active #docker-summary,
 html.drilldown-active #n8n-summary,
+html.drilldown-active #memory-summary,
 html.drilldown-active #docker-edit-groups-btn {
   opacity: 0 !important;
   pointer-events: none !important;
 }
 
+#command-ring-hud,
+#command-ring-hitl {
+  position: fixed;
+  z-index: 28;
+  border-radius: 16px;
+  border: 1px solid rgba(108, 152, 255, 0.18);
+  background:
+    radial-gradient(circle at top left, rgba(112, 146, 255, 0.18), transparent 38%),
+    linear-gradient(180deg, rgba(6, 10, 18, 0.92), rgba(4, 7, 14, 0.96));
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.32);
+}
+
+#command-ring-hud {
+  left: 24px;
+  top: 96px;
+  width: min(380px, calc(100vw - 48px));
+  padding: 18px 20px;
+  transform: translateY(14px);
+}
+
+#command-ring-hitl {
+  right: 24px;
+  bottom: 56px;
+  width: min(400px, calc(100vw - 48px));
+  padding: 18px 20px;
+  transform: translateY(18px);
+}
+
+.command-ring-hud__eyebrow,
+.command-ring-hud__title,
+.command-ring-hud__body,
+.command-ring-hitl__eyebrow,
+.command-ring-hitl__title,
+.command-ring-hitl__question,
+.command-ring-hitl__status,
+.command-ring-hud__hint {
+  font-family: 'Courier New', monospace;
+}
+
+.command-ring-hud__eyebrow,
+.command-ring-hitl__eyebrow {
+  color: rgba(134, 176, 255, 0.72);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.command-ring-hud__title,
+.command-ring-hitl__title {
+  margin-top: 8px;
+  color: rgba(244, 248, 255, 0.96);
+  font-size: 0.94rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.command-ring-hud__body,
+.command-ring-hitl__question {
+  margin-top: 10px;
+  color: rgba(204, 219, 255, 0.72);
+  font-size: 0.72rem;
+  line-height: 1.7;
+}
+
+.command-ring-hud__chips,
+.command-ring-hud__queue,
+.command-ring-hitl__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.command-ring-chip,
+.command-ring-queue-item,
+.command-ring-hitl-chip {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 154, 255, 0.14);
+  background: rgba(108, 142, 255, 0.06);
+  color: rgba(222, 232, 255, 0.84);
+  font-family: 'Courier New', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.10em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.command-ring-queue-item {
+  border-color: rgba(124, 198, 255, 0.16);
+  background: rgba(88, 164, 255, 0.05);
+}
+
+.command-ring-hitl-chip {
+  border-color: rgba(255, 208, 112, 0.18);
+  background: rgba(255, 192, 92, 0.07);
+  color: rgba(255, 228, 176, 0.88);
+}
+
+.command-ring-hud__hint {
+  margin-top: 14px;
+  color: rgba(168, 188, 230, 0.54);
+  font-size: 0.60rem;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+}
+
+.command-ring-hud__hint kbd {
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(132, 174, 255, 0.20);
+  background: rgba(108, 142, 255, 0.08);
+  color: rgba(236, 242, 255, 0.82);
+  font-family: inherit;
+  font-size: 0.64rem;
+}
+
+.command-ring-hitl__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.command-ring-hitl__action {
+  border: 1px solid rgba(118, 198, 255, 0.24);
+  background: rgba(94, 154, 255, 0.10);
+  color: rgba(220, 234, 255, 0.88);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.63rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.command-ring-hitl__action:hover:not(:disabled) {
+  border-color: rgba(146, 214, 255, 0.36);
+  color: rgba(246, 250, 255, 0.96);
+}
+
+.command-ring-hitl__action.is-secondary {
+  border-color: rgba(255, 172, 132, 0.22);
+  background: rgba(255, 124, 92, 0.07);
+  color: rgba(255, 212, 196, 0.86);
+}
+
+.command-ring-hitl__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.command-ring-hitl__status {
+  margin-top: 12px;
+  color: rgba(172, 194, 238, 0.58);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  min-height: 1.4em;
+}
+
+html.command-ring-active #proxmox-back-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  border-color: rgba(120, 164, 255, 0.30);
+  color: rgba(205, 224, 255, 0.86);
+}
+
+html.command-ring-active #command-ring-hud,
+html.command-ring-active #command-ring-hitl {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+html.command-ring-active #section-nav,
+html.command-ring-active #section-titles,
+html.command-ring-active #service-cards,
+html.command-ring-active #docker-summary,
+html.command-ring-active #n8n-summary,
+html.command-ring-active #memory-summary,
+html.command-ring-active #docker-edit-groups-btn {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 #n8n-summary,
+#memory-summary,
 #voice-bridge-status {
   position: fixed;
   z-index: 22;
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-#n8n-summary {
+#n8n-summary,
+#memory-summary {
   right: 40px;
   bottom: 64px;
-  width: min(360px, calc(100vw - 48px));
+  width: min(390px, calc(100vw - 48px));
   padding: 18px 20px;
   border-radius: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(16px);
+}
+
+#n8n-summary {
   background:
     radial-gradient(circle at top left, rgba(132, 163, 255, 0.16), transparent 40%),
     linear-gradient(180deg, rgba(10, 12, 18, 0.88), rgba(6, 7, 12, 0.92));
   border: 1px solid rgba(136, 164, 255, 0.16);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.26);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(16px);
+}
+
+#memory-summary {
+  background:
+    radial-gradient(circle at top left, rgba(116, 255, 210, 0.18), transparent 42%),
+    radial-gradient(circle at bottom right, rgba(255, 180, 92, 0.12), transparent 35%),
+    linear-gradient(180deg, rgba(8, 15, 18, 0.90), rgba(5, 8, 12, 0.94));
+  border: 1px solid rgba(118, 232, 206, 0.18);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.30);
 }
 
 #n8n-summary.visible {
@@ -288,9 +497,17 @@ html.drilldown-active #docker-edit-groups-btn {
   transform: translateY(0);
 }
 
+#memory-summary.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .n8n-summary__eyebrow,
 .n8n-summary__title,
-.n8n-summary__body {
+.n8n-summary__body,
+.memory-summary__eyebrow,
+.memory-summary__title,
+.memory-summary__body {
   font-family: 'Courier New', monospace;
 }
 
@@ -314,6 +531,129 @@ html.drilldown-active #docker-edit-groups-btn {
   color: rgba(201, 216, 255, 0.68);
   font-size: 0.72rem;
   line-height: 1.7;
+}
+
+.memory-summary__eyebrow {
+  color: rgba(123, 239, 215, 0.78);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.memory-summary__title {
+  margin-top: 8px;
+  color: rgba(240, 255, 250, 0.98);
+  font-size: 0.94rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.memory-summary__body {
+  margin-top: 10px;
+  color: rgba(204, 235, 228, 0.72);
+  font-size: 0.72rem;
+  line-height: 1.7;
+}
+
+.summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.summary-chip,
+.n8n-source,
+.n8n-workflow,
+.n8n-target,
+.n8n-idea,
+.memory-source,
+.memory-chip,
+.memory-doc,
+.memory-note {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(235, 243, 255, 0.82);
+  font-family: 'Courier New', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.10em;
+  line-height: 1;
+}
+
+.summary-chip {
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.n8n-summary__sources,
+.n8n-summary__workflows,
+.n8n-summary__targets,
+.n8n-summary__ideas,
+.memory-summary__layers,
+.memory-summary__sources,
+.memory-summary__docs,
+.memory-summary__notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.n8n-source,
+.n8n-workflow,
+.n8n-target,
+.n8n-idea,
+.memory-source,
+.memory-doc,
+.memory-chip {
+  padding: 8px 10px;
+}
+
+.n8n-source {
+  border-color: rgba(120, 153, 255, 0.16);
+  background: rgba(109, 141, 255, 0.06);
+  color: rgba(205, 220, 255, 0.82);
+}
+
+.n8n-workflow {
+  border-color: rgba(137, 191, 255, 0.16);
+  background: rgba(92, 143, 255, 0.05);
+  color: rgba(229, 238, 255, 0.86);
+}
+
+.n8n-target {
+  border-color: rgba(119, 235, 212, 0.16);
+  background: rgba(78, 204, 178, 0.05);
+  color: rgba(201, 246, 236, 0.82);
+}
+
+.n8n-idea {
+  border-color: rgba(255, 210, 120, 0.16);
+  background: rgba(255, 184, 82, 0.05);
+  color: rgba(255, 228, 186, 0.84);
+}
+
+.memory-source {
+  border-color: rgba(118, 232, 206, 0.16);
+  background: rgba(118, 232, 206, 0.05);
+  color: rgba(197, 243, 230, 0.78);
+}
+
+.memory-chip strong {
+  color: rgba(132, 255, 214, 0.86);
+  font-weight: 700;
+}
+
+.memory-doc {
+  border-color: rgba(255, 202, 122, 0.16);
+  background: rgba(255, 192, 92, 0.05);
+  color: rgba(255, 226, 176, 0.84);
+}
+
+.memory-note {
+  padding: 6px 9px;
+  color: rgba(204, 235, 228, 0.70);
 }
 
 #voice-bridge-status {
@@ -347,7 +687,8 @@ html.drilldown-active #docker-edit-groups-btn {
   border-color: rgba(255, 118, 118, 0.28);
 }
 
-.n8n-label {
+.n8n-label,
+.memory-label {
   position: fixed;
   transform: translate(-50%, -50%);
   display: flex;
@@ -356,13 +697,15 @@ html.drilldown-active #docker-edit-groups-btn {
   padding: 6px 9px;
   border-radius: 10px;
   background: rgba(10, 12, 18, 0.66);
-  border: 1px solid rgba(136, 164, 255, 0.12);
+  border: 1px solid var(--n8n-accent, rgba(136, 164, 255, 0.12));
   pointer-events: none;
   white-space: nowrap;
 }
 
 .n8n-label__name,
-.n8n-label__status {
+.n8n-label__status,
+.memory-label__name,
+.memory-label__status {
   font-family: 'Courier New', monospace;
 }
 
@@ -373,8 +716,43 @@ html.drilldown-active #docker-edit-groups-btn {
 }
 
 .n8n-label__status {
-  color: rgba(152, 187, 255, 0.62);
+  color: var(--n8n-accent, rgba(152, 187, 255, 0.62));
   font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.n8n-label[data-trigger="schedule"] {
+  background: rgba(8, 13, 22, 0.78);
+}
+
+.n8n-label[data-trigger="manual"] {
+  background: rgba(13, 12, 20, 0.76);
+}
+
+.n8n-label[data-trigger="webhook"] {
+  background: rgba(18, 10, 16, 0.78);
+}
+
+.memory-label {
+  border-color: var(--memory-accent, rgba(118, 232, 206, 0.72));
+  background: rgba(7, 11, 14, 0.74);
+  box-shadow: 0 0 22px rgba(0, 0, 0, 0.18);
+}
+
+.memory-label[data-kind="anchor"] {
+  background: rgba(12, 15, 20, 0.84);
+}
+
+.memory-label__name {
+  color: rgba(245, 253, 250, 0.94);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+}
+
+.memory-label__status {
+  color: var(--memory-accent, rgba(118, 232, 206, 0.72));
+  font-size: 0.5rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }

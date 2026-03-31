@@ -60,6 +60,8 @@ export class DockerPlanet {
     this._camera = camera;
     this._fade   = 1.0;
     this._labelFade = 1.0;
+    this._telemetry = { running: 0, total: 0, healthy: 0, unhealthy: 0 };
+    this._accentColor = new THREE.Color(0x00a8c8);
 
     this._group = new THREE.Group();
     this._group.position.set(11.5, -5.0, -2.0);
@@ -81,6 +83,15 @@ export class DockerPlanet {
 
   setLabelFade(fade) {
     this._labelFade = THREE.MathUtils.clamp(fade, 0, 1);
+  }
+
+  setTelemetry(telemetry = {}) {
+    this._telemetry = {
+      running: telemetry.running ?? this._telemetry.running,
+      total: telemetry.total ?? this._telemetry.total,
+      healthy: telemetry.healthy ?? this._telemetry.healthy,
+      unhealthy: telemetry.unhealthy ?? this._telemetry.unhealthy,
+    };
   }
 
   // ── Planet ─────────────────────────────────────────────────────────────
@@ -108,18 +119,19 @@ export class DockerPlanet {
       side:        THREE.BackSide,
       depthWrite:  false,
     });
-    this._group.add(new THREE.Mesh(atmGeo, atmMat));
+    this._atmosphere = new THREE.Mesh(atmGeo, atmMat);
+    this._group.add(this._atmosphere);
   }
 
   _buildLight() {
     const p = this._group.position;
-    const light = new THREE.PointLight(0x40d0e8, 1.5, 18);
-    light.position.set(p.x + 3.5, p.y + 2.5, p.z + 4);
-    this._scene.add(light);
+    this._keyLight = new THREE.PointLight(0x40d0e8, 1.5, 18);
+    this._keyLight.position.set(p.x + 3.5, p.y + 2.5, p.z + 4);
+    this._scene.add(this._keyLight);
 
-    const rim = new THREE.PointLight(0x006080, 0.6, 12);
-    rim.position.set(p.x - 4, p.y - 3, p.z - 4);
-    this._scene.add(rim);
+    this._rimLight = new THREE.PointLight(0x006080, 0.6, 12);
+    this._rimLight.position.set(p.x - 4, p.y - 3, p.z - 4);
+    this._scene.add(this._rimLight);
   }
 
   // ── Event subscription ────────────────────────────────────────────────
@@ -308,10 +320,40 @@ export class DockerPlanet {
   // ── Per-frame update ──────────────────────────────────────────────────
 
   update(elapsed, delta) {
+    const total = Math.max(this._telemetry.total || 0, 0);
+    const runningRatio = total > 0 ? (this._telemetry.running || 0) / total : 0;
+    const healthyRatio = total > 0 ? (this._telemetry.healthy || 0) / total : 0;
+    const unhealthyRatio = total > 0 ? (this._telemetry.unhealthy || 0) / total : 0;
+    const targetColor = new THREE.Color(
+      unhealthyRatio > 0.16 ? 0xff8a52 :
+      runningRatio > 0.66 ? 0x37f0cf :
+      0x52b8ff
+    );
+
+    this._accentColor.lerp(targetColor, 0.08);
+
     // Planet rotation
     this._sphere.rotation.y = elapsed * 0.035;
     this._sphere.material.opacity = this._fade;
-    if (this._group.children[1]) this._group.children[1].material.opacity = 0.09 * this._fade;
+    this._sphere.material.emissive.lerp(
+      this._accentColor.clone().multiplyScalar(0.18 + runningRatio * 0.10 + unhealthyRatio * 0.06),
+      0.08
+    );
+    if (this._atmosphere) {
+      this._atmosphere.material.color.lerp(this._accentColor, 0.08);
+      this._atmosphere.material.opacity = (0.05 + runningRatio * 0.08 + unhealthyRatio * 0.05) * this._fade;
+    }
+    if (this._keyLight) {
+      this._keyLight.color.lerp(this._accentColor, 0.08);
+      this._keyLight.intensity = (1.15 + runningRatio * 0.8 + Math.sin(elapsed * 0.9) * 0.12) * this._fade;
+    }
+    if (this._rimLight) {
+      this._rimLight.color.lerp(
+        new THREE.Color(unhealthyRatio > 0.01 ? 0xff8a52 : 0x00a8c8),
+        0.06
+      );
+      this._rimLight.intensity = (0.24 + healthyRatio * 0.46 + unhealthyRatio * 0.18) * this._fade;
+    }
 
     // Network ring wobble
     for (let i = 0; i < this._orbitTrails.length; i++) {

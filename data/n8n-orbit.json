@@ -1,0 +1,503 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-22T02:58:00Z",
+  "mode": "generated",
+  "sourcePaths": {
+    "workflowRoot": "/root/n8n-workflows",
+    "n8nUrl": "http://10.201.52.171:5678",
+    "projectNote": "/mnt/llm-memory/proxmox/memory/project_docker1_n8n.md",
+    "roadmapNote": "/mnt/llm-memory/proxmox/memory/project_jenkins_dashboard_roadmap.md"
+  },
+  "overview": {
+    "title": "Automation orbit seed pack is in place",
+    "summary": "13 workflows now span schedules, manual probes, and webhook experiments around the VM105 automation stack.",
+    "blocker": "Live dashboard polling still needs /proxy/n8n to inject X-N8N-API-KEY.",
+    "lastSeedUpdate": "2026-03-22T02:58:00Z",
+    "usableNow": "10 usable workflows are ready in n8n now, while 3 webhook routes still need runtime follow-up.",
+    "focus": "Keep the orbit honest: real schedule/manual workflows now, authenticated live execution rendering next."
+  },
+  "stats": {
+    "workflowCount": 13,
+    "activeWorkflows": 6,
+    "scheduleCount": 6,
+    "manualCount": 2,
+    "webhookCount": 5,
+    "usableCount": 10,
+    "routeIssueCount": 3,
+    "executionCount": 21,
+    "failedExecutions": 3,
+    "runningExecutions": 0
+  },
+  "workflowRuns": [
+    {
+      "id": "3b08a2a8-def8-415b-892f-498e81ce5460",
+      "name": "Automation Orbit - Daily Auth Audit",
+      "description": "Daily schedule that probes auth-gated automation endpoints so you can track which routes still need credentials or proxy headers.",
+      "fileName": "daily-auth-audit.json",
+      "sourcePath": "/root/n8n-workflows/daily-auth-audit.json",
+      "triggerKind": "schedule",
+      "category": "auth",
+      "tone": "watchful",
+      "cadence": "Daily at 06:12",
+      "route": null,
+      "routeState": "ready",
+      "usable": true,
+      "active": true,
+      "status": "active",
+      "nodeCount": 3,
+      "targets": [
+        "n8n Public API Audit",
+        "Qdrant Collections Audit"
+      ],
+      "notes": [
+        "Tracks auth-gated services so the orbit can surface blocked integrations honestly.",
+        "Useful as a daily reminder of which proxies still need credentials or headers."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "waiting"
+        },
+        {
+          "id": "seed-exec-2",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "id": "7009c29c-d44c-49ae-af25-b306741fa837",
+      "name": "Automation Orbit - Docker Container Health -> AI Triage Report",
+      "description": "Hourly schedule that pulls Docker health data from VM105, sends the normalized snapshot to LM Studio for AI triage, and appends the plain-English health report to today's Logseq...",
+      "fileName": "docker-health-ai-triage.json",
+      "sourcePath": "/root/n8n-workflows/docker-health-ai-triage.json",
+      "triggerKind": "schedule",
+      "category": "observability",
+      "tone": "watchful",
+      "cadence": "Every 1h at :19",
+      "route": "/webhook/docker-health-live",
+      "routeState": "ready",
+      "usable": true,
+      "active": true,
+      "status": "active",
+      "nodeCount": 7,
+      "targets": [
+        "Webhook docker-health-live",
+        "LM Studio AI Triage"
+      ],
+      "notes": [
+        "Scheduled Docker health sweep for VM105 with container-state and docker-stats normalization.",
+        "Live path now uses LM Studio at 100.71.100.103:1234 with qwen/qwen3-30b-a3b-2507 and appends into Logseq through the VM105 mount with sudo."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "success"
+        },
+        {
+          "id": "seed-exec-2",
+          "status": "watching"
+        },
+        {
+          "id": "seed-exec-3",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "id": "16598835-4778-40a3-8b13-daa071da80ac",
+      "name": "Automation Orbit - Hourly Stack Pulse",
+      "description": "Hourly schedule that checks the public VM105 automation surfaces and captures a lightweight pulse of the stack.",
+      "fileName": "hourly-stack-pulse.json",
+      "sourcePath": "/root/n8n-workflows/hourly-stack-pulse.json",
+      "triggerKind": "schedule",
+      "category": "observability",
+      "tone": "steady",
+      "cadence": "Every 1h at :07",
+      "route": null,
+      "routeState": "ready",
+      "usable": true,
+      "active": true,
+      "status": "active",
+      "nodeCount": 4,
+      "targets": [
+        "n8n Settings",
+        "TTS API Health",
+        "Memory Snapshot"
+      ],
+      "notes": [
+        "Runs hourly and captures a lightweight pulse of the public automation stack.",
+        "Designed to give the orbit a dependable schedule-based backbone."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "success"
+        },
+        {
+          "id": "seed-exec-2",
+          "status": "waiting"
+        },
+        {
+          "id": "seed-exec-3",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0012-4000-8000-changelog012",
+      "name": "Automation Orbit - Auto-Generated Homelab Changelog",
+      "description": "Weekly Sunday midnight: reads last 7 days of Logseq journals + git log from jenkins-proxy repo, sends to Ollama to produce a structured changelog, writes to /mnt/llm-memory/logs...",
+      "fileName": "12-homelab-changelog.json",
+      "sourcePath": "/root/n8n-workflows/12-homelab-changelog.json",
+      "triggerKind": "schedule",
+      "category": "schedule",
+      "tone": "steady",
+      "cadence": "Cron 0 0 * * 0",
+      "route": null,
+      "routeState": "n/a",
+      "usable": true,
+      "active": false,
+      "status": "idle",
+      "nodeCount": 7,
+      "targets": [
+        "Ollama Generate Changelog"
+      ],
+      "notes": [],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "idle"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0015-4000-8000-eval00000015",
+      "name": "Automation Orbit - Nightly LLM Eval Runner",
+      "description": "Nightly 3am: runs a hardcoded eval suite against Ollama llama3.2. Each prompt is scored by keyword presence and length. Results appended to Logseq journal. If pass rate drops be...",
+      "fileName": "15-llm-eval-runner.json",
+      "sourcePath": "/root/n8n-workflows/15-llm-eval-runner.json",
+      "triggerKind": "schedule",
+      "category": "schedule",
+      "tone": "steady",
+      "cadence": "Cron 0 3 * * *",
+      "route": null,
+      "routeState": "n/a",
+      "usable": true,
+      "active": false,
+      "status": "idle",
+      "nodeCount": 7,
+      "targets": [
+        "Ollama Run Eval"
+      ],
+      "notes": [],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "idle"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0011-4000-8000-valkey000011",
+      "name": "Automation Orbit - Ticket/Task Groomer",
+      "description": "Daily 9am: reads the Valkey task queue, sends tasks to Ollama to prioritize and annotate, rewrites the queue with groomed entries, and updates VALKEY.md on the Proxmox host. Red...",
+      "fileName": "11-task-groomer.json",
+      "sourcePath": "/root/n8n-workflows/11-task-groomer.json",
+      "triggerKind": "schedule",
+      "category": "schedule",
+      "tone": "steady",
+      "cadence": "Cron 0 9 * * *",
+      "route": null,
+      "routeState": "n/a",
+      "usable": true,
+      "active": false,
+      "status": "idle",
+      "nodeCount": 11,
+      "targets": [
+        "Ollama Groom Tasks"
+      ],
+      "notes": [],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "idle"
+        }
+      ]
+    },
+    {
+      "id": "f1ce5425-c671-4d23-bf20-6e5f9825ef99",
+      "name": "Automation Orbit - Protected Service Probe",
+      "description": "Manual probe for auth-gated services so you can confirm the service is alive even when credentials are missing.",
+      "fileName": "protected-service-probe.json",
+      "sourcePath": "/root/n8n-workflows/protected-service-probe.json",
+      "triggerKind": "manual",
+      "category": "auth",
+      "tone": "hands-on",
+      "cadence": null,
+      "route": null,
+      "routeState": "manual",
+      "usable": true,
+      "active": false,
+      "status": "idle",
+      "nodeCount": 3,
+      "targets": [
+        "n8n Public API Probe",
+        "Qdrant Collections Probe"
+      ],
+      "notes": [
+        "On-demand probe for credentialed services such as n8n public API and Qdrant.",
+        "Helpful for confirming a service is alive even before auth is wired through."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "idle"
+        }
+      ]
+    },
+    {
+      "id": "1f41e6dd-9a36-4d30-8e8b-7e41b52485ea",
+      "name": "Automation Orbit - Public Service Sweep",
+      "description": "Manual probe for public VM105 service endpoints that do not require credentials.",
+      "fileName": "public-service-sweep.json",
+      "sourcePath": "/root/n8n-workflows/public-service-sweep.json",
+      "triggerKind": "manual",
+      "category": "observability",
+      "tone": "hands-on",
+      "cadence": null,
+      "route": null,
+      "routeState": "manual",
+      "usable": true,
+      "active": false,
+      "status": "idle",
+      "nodeCount": 3,
+      "targets": [
+        "n8n Settings",
+        "TTS API Health"
+      ],
+      "notes": [
+        "One-click manual sweep for public VM105 endpoints.",
+        "Safe editor-side probe when you want to inspect raw responses without credentials."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "idle"
+        }
+      ]
+    },
+    {
+      "id": "fa9adb60-6dd3-4f6d-bba1-5b1a06f65874",
+      "name": "Automation Orbit - n8n Settings Webhook",
+      "description": "GET webhook wrapper around the local n8n public settings endpoint.",
+      "fileName": "n8n-settings-webhook.json",
+      "sourcePath": "/root/n8n-workflows/n8n-settings-webhook.json",
+      "triggerKind": "webhook",
+      "category": "webhook",
+      "tone": "experimental",
+      "cadence": null,
+      "route": "/webhook/n8n-settings",
+      "routeState": "published-route-unresolved",
+      "usable": false,
+      "active": true,
+      "status": "error",
+      "nodeCount": 2,
+      "targets": [
+        "Webhook n8n-settings",
+        "n8n Settings"
+      ],
+      "notes": [
+        "Intended as a simple GET wrapper around the local n8n settings endpoint.",
+        "Needs the production webhook route issue solved before it is truly external-facing."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "error"
+        },
+        {
+          "id": "seed-exec-2",
+          "status": "waiting"
+        }
+      ]
+    },
+    {
+      "id": "4d27c49b-6ce8-46c5-b498-e8995d4dd9f0",
+      "name": "Automation Orbit - Ops Intake Webhook",
+      "description": "POST webhook that normalizes incoming payloads into a simple ops-intake envelope for future automations.",
+      "fileName": "ops-intake-webhook.json",
+      "sourcePath": "/root/n8n-workflows/ops-intake-webhook.json",
+      "triggerKind": "webhook",
+      "category": "webhook",
+      "tone": "experimental",
+      "cadence": null,
+      "route": "/webhook/ops-intake",
+      "routeState": "published-route-unresolved",
+      "usable": false,
+      "active": true,
+      "status": "error",
+      "nodeCount": 2,
+      "targets": [
+        "Webhook ops-intake"
+      ],
+      "notes": [
+        "Production webhook activation is published, but the route is still not resolving at runtime.",
+        "Keep this in the orbit as a future ingress point for dashboard and alert traffic."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "error"
+        },
+        {
+          "id": "seed-exec-2",
+          "status": "waiting"
+        }
+      ]
+    },
+    {
+      "id": "1a54ec11-3f89-4209-8af4-f221b982f9c1",
+      "name": "Automation Orbit - TTS Health Webhook",
+      "description": "GET webhook wrapper around the local TTS API health endpoint.",
+      "fileName": "tts-health-webhook.json",
+      "sourcePath": "/root/n8n-workflows/tts-health-webhook.json",
+      "triggerKind": "webhook",
+      "category": "webhook",
+      "tone": "experimental",
+      "cadence": null,
+      "route": "/webhook/tts-health",
+      "routeState": "published-route-unresolved",
+      "usable": false,
+      "active": true,
+      "status": "error",
+      "nodeCount": 2,
+      "targets": [
+        "Webhook tts-health",
+        "TTS Health"
+      ],
+      "notes": [
+        "Intended as a lightweight health relay for the local TTS service.",
+        "Published in n8n, but still blocked by the unresolved production route registration."
+      ],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "error"
+        },
+        {
+          "id": "seed-exec-2",
+          "status": "waiting"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-013a-4000-8000-ragingest013a",
+      "name": "Automation Orbit - RAG Ingest (Embed to Qdrant)",
+      "description": "Webhook receives a document (text + metadata). Chunks it into 500-char overlapping segments, embeds each chunk via Ollama nomic-embed-text, upserts all points into Qdrant collec...",
+      "fileName": "13a-rag-ingest.json",
+      "sourcePath": "/root/n8n-workflows/13a-rag-ingest.json",
+      "triggerKind": "webhook",
+      "category": "webhook",
+      "tone": "steady",
+      "cadence": null,
+      "route": "/webhook/rag-ingest",
+      "routeState": "ready",
+      "usable": true,
+      "active": false,
+      "status": "idle",
+      "nodeCount": 9,
+      "targets": [
+        "Webhook rag-ingest",
+        "Ollama Embed Chunk",
+        "Upsert to Qdrant"
+      ],
+      "notes": [],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "idle"
+        }
+      ]
+    },
+    {
+      "id": "a1b2c3d4-013b-4000-8000-ragquery013b",
+      "name": "Automation Orbit - RAG Query (Search + Answer)",
+      "description": "Webhook receives a question. Embeds it via Ollama nomic-embed-text, searches Qdrant for top-5 relevant chunks, builds a grounded context window, sends to Ollama llama3.2 for an...",
+      "fileName": "13b-rag-query.json",
+      "sourcePath": "/root/n8n-workflows/13b-rag-query.json",
+      "triggerKind": "webhook",
+      "category": "webhook",
+      "tone": "steady",
+      "cadence": null,
+      "route": "/webhook/rag-query",
+      "routeState": "ready",
+      "usable": true,
+      "active": false,
+      "status": "idle",
+      "nodeCount": 10,
+      "targets": [
+        "Webhook rag-query",
+        "Embed Query",
+        "Search Qdrant",
+        "Ollama Answer"
+      ],
+      "notes": [],
+      "executions": [
+        {
+          "id": "seed-exec-1",
+          "status": "idle"
+        }
+      ]
+    }
+  ],
+  "targets": [
+    "n8n Public API Audit",
+    "Qdrant Collections Audit",
+    "Webhook docker-health-live",
+    "LM Studio AI Triage",
+    "n8n Settings",
+    "TTS API Health",
+    "Memory Snapshot",
+    "Ollama Generate Changelog",
+    "Ollama Run Eval",
+    "Ollama Groom Tasks",
+    "n8n Public API Probe",
+    "Qdrant Collections Probe",
+    "Webhook n8n-settings",
+    "Webhook ops-intake",
+    "Webhook tts-health",
+    "TTS Health",
+    "Webhook rag-ingest",
+    "Ollama Embed Chunk",
+    "Upsert to Qdrant",
+    "Webhook rag-query",
+    "Embed Query",
+    "Search Qdrant",
+    "Ollama Answer"
+  ],
+  "supportingDocs": [
+    {
+      "name": "project_docker1_n8n.md",
+      "path": "/mnt/llm-memory/proxmox/memory/project_docker1_n8n.md",
+      "summary": "type: project"
+    },
+    {
+      "name": "project_jenkins_dashboard_roadmap.md",
+      "path": "/mnt/llm-memory/proxmox/memory/project_jenkins_dashboard_roadmap.md",
+      "summary": "type: project"
+    },
+    {
+      "name": "project_n8n_orbit_upgrade.md",
+      "path": "/mnt/llm-memory/proxmox/memory/project_n8n_orbit_upgrade.md",
+      "summary": "type: project"
+    }
+  ],
+  "nextIdeas": [
+    "Inject X-N8N-API-KEY through /proxy/n8n so the orbit can use live workflow and execution history.",
+    "Turn the summary card into an inspector with trigger type, targets, cadence, and direct route details.",
+    "Route dashboard alerts and voice-bridge events into Ops Intake once webhook production URLs resolve.",
+    "Persist daily auth-audit summaries into the memory system or Logseq vault for trend tracking.",
+    "Keep a Claude-ready workflow clause beside the seed pack so new automations follow the same orbit conventions."
+  ],
+  "claudeWorkflowClause": "Build n8n workflows for the Automation Orbit using clear names that start with 'Automation Orbit -', prefer manual or schedule triggers unless public webhook routing is verified, target real VM105 services when possible, return normalized JSON, and include a short description of trigger, purpose, and external dependencies."
+}

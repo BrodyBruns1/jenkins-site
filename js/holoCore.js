@@ -118,6 +118,8 @@ export class HoloCore {
     this._glyphEmitCooldown = 0;
     this._nextGlyphIndex = 0;
     this._glyphStream = '';
+    this._raycaster = new THREE.Raycaster();
+    this._hitNdc = new THREE.Vector2();
 
     this._buildCore();
     this._buildWireframes();
@@ -140,6 +142,16 @@ export class HoloCore {
   triggerResponsePulse(strength = 1, text = '') {
     this._responseEnergy = Math.max(this._responseEnergy, THREE.MathUtils.clamp(strength, 0, 3));
     void text;
+  }
+
+  hitTest(clientX, clientY, camera) {
+    if (!camera || !this._coreMesh) return false;
+    this._hitNdc.set(
+      (clientX / window.innerWidth) * 2 - 1,
+      -((clientY / window.innerHeight) * 2 - 1)
+    );
+    this._raycaster.setFromCamera(this._hitNdc, camera);
+    return this._raycaster.intersectObject(this._coreMesh, false).length > 0;
   }
 
   _bufferText(text) {
