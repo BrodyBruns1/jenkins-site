@@ -533,9 +533,11 @@ export class CommandRing {
     ctx.lineWidth = ghost ? 1.0 : 1.6;
     ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
 
-    ctx.fillStyle = accent;
+    ctx.fillStyle = ghost ? 'rgba(176, 154, 228, 0.62)' : 'rgba(154, 186, 228, 0.72)';
     ctx.font = '700 16px "Courier New", monospace';
     ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.42)';
+    ctx.shadowBlur = 2;
     ctx.fillText(title.toUpperCase(), 22, 18);
 
     ctx.strokeStyle = 'rgba(150, 190, 255, 0.14)';
@@ -545,14 +547,17 @@ export class CommandRing {
     ctx.lineTo(canvas.width - 20, 46);
     ctx.stroke();
 
-    ctx.fillStyle = ghost ? 'rgba(194, 172, 255, 0.58)' : 'rgba(212, 228, 255, 0.84)';
+    ctx.fillStyle = ghost ? 'rgba(176, 164, 212, 0.62)' : 'rgba(168, 184, 208, 0.78)';
     ctx.font = '13px "Courier New", monospace';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowBlur = 1.5;
     lines.slice(0, 10).forEach((line, lineIndex) => {
       ctx.fillText(line, 22, 66 + lineIndex * 22);
     });
 
     ctx.fillStyle = ghost ? 'rgba(194, 172, 255, 0.40)' : 'rgba(146, 170, 214, 0.58)';
     ctx.font = '11px "Courier New", monospace';
+    ctx.shadowBlur = 0;
     ctx.fillText(footer || 'Mission Control / Command Ring', 22, canvas.height - 28);
 
     texture.needsUpdate = true;
