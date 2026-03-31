@@ -142,6 +142,11 @@ export class CommandRing {
     this._panelMeshes = [];
     this._queueOrbPool = [];
     this._tmpColor = new THREE.Color();
+    this._cameraForward = new THREE.Vector3();
+    this._panelWorldPos = new THREE.Vector3();
+    this._panelViewDir = new THREE.Vector3();
+    this._panelTargetPos = new THREE.Vector3();
+    this._panelTargetScale = new THREE.Vector3(1, 1, 1);
 
     this._jenkins = getJenkinsSnapshot();
     this._dockerContainers = getContainers();
@@ -276,6 +281,9 @@ export class CommandRing {
       const y = Math.sin(i * 0.6) * 0.18;
       mesh.position.set(Math.cos(angle) * PANEL_RADIUS, y, Math.sin(angle) * PANEL_RADIUS);
       mesh.lookAt(0, y * 0.35, 0);
+      mesh.userData.basePosition = mesh.position.clone();
+      mesh.userData.focusY = y;
+      mesh.userData.focus = 0;
 
       this._panelCanvases.push(canvas);
       this._panelContexts.push(context);
@@ -515,6 +523,40 @@ export class CommandRing {
     }
   }
 
+  _updatePanelFocus(delta) {
+    const ease = 1 - Math.exp(-delta * 8);
+    this._cameraForward.set(0, 0, -1).applyQuaternion(this._camera.quaternion).normalize();
+
+    let bestIndex = -1;
+    let bestAlignment = -1;
+    for (let i = 0; i < this._panelMeshes.length; i += 1) {
+      const mesh = this._panelMeshes[i];
+      mesh.getWorldPosition(this._panelWorldPos);
+      this._panelViewDir.copy(this._panelWorldPos).sub(this._camera.position).normalize();
+      const alignment = this._cameraForward.dot(this._panelViewDir);
+      if (alignment > bestAlignment) {
+        bestAlignment = alignment;
+        bestIndex = i;
+      }
+    }
+
+    const focusStrength = THREE.MathUtils.smoothstep(bestAlignment, 0.84, 0.992);
+    for (let i = 0; i < this._panelMeshes.length; i += 1) {
+      const mesh = this._panelMeshes[i];
+      const basePosition = mesh.userData.basePosition;
+      const targetFocus = i === bestIndex ? focusStrength : 0;
+      const nextFocus = THREE.MathUtils.lerp(mesh.userData.focus || 0, targetFocus, ease);
+      mesh.userData.focus = nextFocus;
+
+      this._panelTargetPos.copy(basePosition).multiplyScalar(1 - nextFocus * 0.24);
+      mesh.position.lerp(this._panelTargetPos, ease);
+
+      this._panelTargetScale.setScalar(1 + nextFocus * 0.16);
+      mesh.scale.lerp(this._panelTargetScale, ease);
+      mesh.lookAt(0, mesh.userData.focusY * 0.35, 0);
+    }
+  }
+
   _renderPanel(index, { title, accent, lines = [], footer = '', ghost = false }) {
     const ctx = this._panelContexts[index];
     const canvas = this._panelCanvases[index];
@@ -533,7 +575,7 @@ export class CommandRing {
     ctx.lineWidth = ghost ? 1.0 : 1.6;
     ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
 
-    ctx.fillStyle = ghost ? 'rgba(176, 154, 228, 0.62)' : 'rgba(154, 186, 228, 0.72)';
+    ctx.fillStyle = ghost ? 'rgba(168, 148, 214, 0.54)' : 'rgba(138, 164, 198, 0.64)';
     ctx.font = '700 16px "Courier New", monospace';
     ctx.textBaseline = 'top';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.42)';
@@ -547,7 +589,7 @@ export class CommandRing {
     ctx.lineTo(canvas.width - 20, 46);
     ctx.stroke();
 
-    ctx.fillStyle = ghost ? 'rgba(176, 164, 212, 0.62)' : 'rgba(168, 184, 208, 0.78)';
+    ctx.fillStyle = ghost ? 'rgba(168, 158, 202, 0.56)' : 'rgba(150, 164, 182, 0.68)';
     ctx.font = '13px "Courier New", monospace';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
     ctx.shadowBlur = 1.5;
@@ -733,6 +775,7 @@ export class CommandRing {
     this._updateLights(delta);
     this._updateConduit(elapsed, delta);
     this._updateQueueOrbs(elapsed, delta);
+    this._updatePanelFocus(delta);
 
     this._panelRefreshCooldown -= delta;
     this._clockRefreshCooldown -= delta;

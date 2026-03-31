@@ -595,7 +595,7 @@ window.addEventListener('pointermove', (e) => {
   _dragState.moved = true;
   if (_dragState.mode === 'commandring' && _cameraMode === 'commandring') {
     _commandRingYaw   -= dx * 0.0052;
-    _commandRingPitch += dy * 0.0032;
+    _commandRingPitch -= dy * 0.0032;
     _commandRingPitch = THREE.MathUtils.clamp(_commandRingPitch, -0.42, 0.42);
     commandRing.setOrbit(_commandRingYaw, _commandRingPitch);
   } else if (_dragState.mode === 'scroll' && _cameraMode === 'scroll') {
