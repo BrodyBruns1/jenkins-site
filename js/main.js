@@ -23,6 +23,7 @@ import { HealthRings }                 from './rings.js';
 import { HoloCore }                    from './holoCore.js';
 import { HomelabPlanet }               from './planet.js';
 import { ServiceNodes }                from './nodes.js';
+import { ServiceObelisks }             from './serviceObelisks.js';
 import { startServicePolling }         from './services.js';
 import { closePanel, initPanels }      from './panels.js';
 import { DockerPlanet }                from './dockerPlanet.js';
@@ -112,6 +113,7 @@ const core    = new HoloCore(scene);
 const planet  = new HomelabPlanet(scene);
 const proxmoxDrillDown = new ProxmoxDrillDown(scene, camera);
 const nodes   = new ServiceNodes(scene, planet.position, { onSelect: _handleServiceSelect });
+const obelisks = new ServiceObelisks(scene, camera, { onSelect: _handleServiceSelect });
 nodes.setCamera(camera);
 
 // Docker planet (section 2 — replaces the old empty sister planet)
@@ -572,6 +574,7 @@ dragSurface?.addEventListener('click', (e) => {
     _enterCommandRing();
     return;
   }
+  if (obelisks.handlePointerClick(e.clientX, e.clientY)) return;
   nodes.handlePointerClick(e.clientX, e.clientY);
 });
 
@@ -1002,10 +1005,12 @@ function _updateSceneFocus() {
   dockerPlanet.setFade(sceneFade);
   n8nPlanet.setFade(sceneFade);
   memoryPlanet.setFade(sceneFade);
+  obelisks.setFade(sceneFade);
   commandRing.setBlend(_commandRingBlend);
 
   nodes.setFade(Math.max(sceneFade, 0.12));
   nodes.setLabelFade(Math.max(sceneFade * _serviceLabelProximity, 0.0));
+  obelisks.setLabelFade(Math.max(sceneFade * _serviceLabelProximity, 0.0));
   dockerPlanet.setLabelFade(Math.max(sceneFade * _dockerLabelProximity, 0.0));
   n8nPlanet.setLabelFade(Math.max(sceneFade * _n8nLabelProximity, 0.0));
   memoryPlanet.setLabelFade(Math.max(sceneFade * _memoryLabelProximity, 0.0));
@@ -1046,6 +1051,7 @@ function animate() {
   core.update(elapsed, delta);
   reactor.setImpactBursts(core.getGlyphCollisionBursts());
   planet.update(elapsed, delta);
+  obelisks.update(elapsed, delta);
   nodes.update(elapsed, delta);
   dockerPlanet.update(elapsed, delta);
   n8nPlanet.update(elapsed, delta);
