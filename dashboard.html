@@ -116,6 +116,15 @@
     <div class="n8n-summary__ideas" id="n8n-summary-ideas"></div>
   </aside>
 
+  <!-- Food planet summary (visible on section 5) -->
+  <aside id="food-summary" aria-live="polite">
+    <div class="food-summary__eyebrow">Recipe Collection</div>
+    <div class="food-summary__title">Your growing cookbook</div>
+    <div class="food-summary__body">Drop recipe links or TikToks in #recipes — Galahad extracts and stores them here. Click the planet to walk the surface.</div>
+    <div class="summary-meta" id="food-summary-meta"></div>
+    <div class="food-summary__cuisines" id="food-summary-cuisines"></div>
+  </aside>
+
   <!-- Memory stack summary (visible on section 4) -->
   <aside id="memory-summary" aria-live="polite">
     <div class="memory-summary__eyebrow">Memory Constellation</div>
@@ -136,6 +145,9 @@
   <!-- Proxmox drill-down controls -->
   <button id="proxmox-back-btn" aria-label="Exit Proxmox drill-down">Back to Orbit</button>
   <aside id="proxmox-drilldown-hud" aria-live="polite"></aside>
+
+  <!-- Food planet drill-down HUD -->
+  <aside id="food-drilldown-hud" aria-live="polite"></aside>
   <aside id="command-ring-hud" aria-live="polite">
     <div class="command-ring-hud__eyebrow">Command Ring</div>
     <div class="command-ring-hud__title">Galahad Command Center</div>
@@ -291,6 +303,7 @@
     <div class="section-title" id="section-title-2">Container Fleet</div>
     <div class="section-title" id="section-title-3">Automation Orbit</div>
     <div class="section-title" id="section-title-4">Memory Constellation</div>
+    <div class="section-title" id="section-title-5">Recipe Collection</div>
   </div>
 
   <!-- Section navigation dots -->
@@ -300,6 +313,7 @@
     <button class="section-dot" data-section="2" aria-label="Container Fleet"></button>
     <button class="section-dot" data-section="3" aria-label="Automation Orbit"></button>
     <button class="section-dot" data-section="4" aria-label="Memory Constellation"></button>
+    <button class="section-dot" data-section="5" aria-label="Recipe Collection"></button>
   </nav>
 
   <!-- Scroll track: makes body scrollable without content overflow -->

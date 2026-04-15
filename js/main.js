@@ -34,6 +34,9 @@ import { getMemorySnapshot, memoryEventBus, startMemoryPolling } from './memoryA
 import { MemoryPlanet, MEMORY_ORBIT_DATA } from './memoryPlanet.js';
 import { connectMissionControlSpeechBridge } from './sttBridge.js';
 import { STT_BRIDGE_CONFIG }           from '../config.js';
+import { FoodPlanet }                  from './foodPlanet.js';
+import { FoodDrillDown }               from './foodDrillDown.js';
+import { getFoodSnapshot, startFoodPolling, foodEventBus } from './foodApi.js';
 import { Starfield }                   from './starfield.js';
 import { CommandRing }                 from './commandRing.js';
 
@@ -118,6 +121,8 @@ nodes.setCamera(camera);
 const dockerPlanet = new DockerPlanet(scene, camera);
 const n8nPlanet = new N8nPlanet(scene, camera);
 const memoryPlanet = new MemoryPlanet(scene, camera);
+const foodPlanet = new FoodPlanet(scene, camera);
+const foodDrillDown = new FoodDrillDown(scene, camera);
 const commandRing = new CommandRing(scene, camera);
 
 // ── Scroll-driven camera track ──────────────────────────────────────────────
@@ -138,6 +143,7 @@ let _serviceLabelProximity = 0;
 let _dockerLabelProximity = 0;
 let _n8nLabelProximity = 0;
 let _memoryLabelProximity = 0;
+let _foodLabelProximity = 0;
 let _orbitYaw = 0;
 let _orbitPitch = 0;
 let _commandRingYaw = 0;
@@ -168,6 +174,7 @@ const WAYPOINTS = [
   { cam: new THREE.Vector3(11.5, -0.75,  5.8),  look: new THREE.Vector3(11.5,  -5.0, -2.0) },
   { cam: new THREE.Vector3(31.5, -0.65,  6.0),  look: new THREE.Vector3(31.5,  -5.1, -2.2) },
   { cam: new THREE.Vector3(51.5, -0.55,  6.2),  look: new THREE.Vector3(51.5,  -5.15, -2.35) },
+  { cam: new THREE.Vector3(71.5, -0.45,  6.4),  look: new THREE.Vector3(71.5,  -5.2,  -2.5) },
 ];
 
 htmlEl.style.setProperty('--section-count', String(WAYPOINTS.length));
@@ -232,6 +239,13 @@ function _updateSectionUI(p) {
   const memoryProximity = 1 - Math.min(Math.abs(p - 4), 1);
   _memoryLabelProximity = Math.max(0, memoryProximity);
   if (memorySummary) memorySummary.classList.toggle('visible', memoryProximity > 0.5);
+
+  const foodSummary = document.getElementById('food-summary');
+  const foodProximity = 1 - Math.min(Math.abs(p - 5), 1);
+  _foodLabelProximity = Math.max(0, foodProximity);
+  if (foodSummary) foodSummary.classList.toggle('visible', foodProximity > 0.5);
+  foodPlanet.setLabelFade(_foodLabelProximity);
+  foodPlanet.updateLabel(camera);
 
   // Show/hide service cards when near section 1
   const svcCards = document.getElementById('service-cards');
@@ -556,7 +570,7 @@ function _isInteractiveTarget(target) {
   return !!target.closest(
     '.svc-label, .docker-label, .svc-card, .detail-panel, .panel-overlay, ' +
     '#docker-edit-groups-btn, #docker-group-modal, #section-nav, #proxmox-back-btn, ' +
-    '#proxmox-drilldown-hud, #command-ring-hud, #command-ring-hitl'
+    '#proxmox-drilldown-hud, #food-drilldown-hud, #command-ring-hud, #command-ring-hitl'
   );
 }
 
@@ -566,10 +580,21 @@ dragSurface?.addEventListener('click', (e) => {
     return;
   }
   if (_cameraMode === 'commandring') return;
+  if (_cameraMode === 'foodsurface') {
+    if (!_isInteractiveTarget(e.target)) {
+      foodDrillDown.handleClick(e.clientX, e.clientY, camera);
+    }
+    return;
+  }
   if (_cameraMode !== 'scroll') return;
   if (_isInteractiveTarget(e.target)) return;
   if (Math.abs(_scrollProgress) < 0.45 && core.hitTest?.(e.clientX, e.clientY, camera)) {
     _enterCommandRing();
+    return;
+  }
+  // Food planet click — near section 5
+  if (Math.abs(_scrollProgress - 5) < 0.55 && _hitTestFoodPlanet(e.clientX, e.clientY)) {
+    _enterFoodDrillDown();
     return;
   }
   nodes.handlePointerClick(e.clientX, e.clientY);
@@ -578,7 +603,7 @@ dragSurface?.addEventListener('click', (e) => {
 dragSurface?.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
   if (_isInteractiveTarget(e.target)) return;
-  if (_cameraMode !== 'scroll' && _cameraMode !== 'commandring') return;
+  if (_cameraMode !== 'scroll' && _cameraMode !== 'commandring' && _cameraMode !== 'foodsurface') return;
   _dragState = { x: e.clientX, y: e.clientY, moved: false, mode: _cameraMode };
   if (_cameraMode === 'commandring') {
     commandRing.setInteracting(true);
@@ -598,6 +623,8 @@ window.addEventListener('pointermove', (e) => {
     _commandRingPitch -= dy * 0.0032;
     _commandRingPitch = THREE.MathUtils.clamp(_commandRingPitch, -0.42, 0.42);
     commandRing.setOrbit(_commandRingYaw, _commandRingPitch);
+  } else if (_dragState.mode === 'foodsurface' && _cameraMode === 'foodsurface') {
+    foodDrillDown.applyDrag(dx, dy);
   } else if (_dragState.mode === 'scroll' && _cameraMode === 'scroll') {
     _orbitYaw   -= dx * 0.0065;
     _orbitPitch += dy * 0.0048;
@@ -622,6 +649,10 @@ window.addEventListener('pointercancel', _endDrag);
 backBtn?.addEventListener('click', () => {
   if (_cameraMode === 'commandring') {
     _exitCommandRing();
+    return;
+  }
+  if (_cameraMode === 'foodsurface') {
+    _exitFoodDrillDown();
     return;
   }
   _exitProxmoxDrillDown();
@@ -801,10 +832,32 @@ window.addEventListener('resize', () => {
 });
 
 function _handleServiceSelect(selection) {
-  if (selection.id !== 'proxmox' || _cameraMode !== 'scroll') return false;
-  _enterProxmoxDrillDown(selection);
-  return true;
+  if (_cameraMode !== 'scroll') return false;
+  if (selection.id === 'proxmox') {
+    _enterProxmoxDrillDown(selection);
+    return true;
+  }
+  return false;
 }
+
+// ── Food planet hit-test ─────────────────────────────────────────────────────
+const _foodRaycaster = new THREE.Raycaster();
+function _hitTestFoodPlanet(clientX, clientY) {
+  const x =  (clientX / window.innerWidth)  * 2 - 1;
+  const y = -(clientY / window.innerHeight) * 2 + 1;
+  _foodRaycaster.setFromCamera({ x, y }, camera);
+  // Use a small invisible sphere at the planet position as the hit target
+  if (!_foodHitSphere) {
+    _foodHitSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(1.4, 8, 8),
+      new THREE.MeshBasicMaterial({ visible: false }),
+    );
+    _foodHitSphere.position.copy(foodPlanet.position);
+    scene.add(_foodHitSphere);
+  }
+  return _foodRaycaster.intersectObject(_foodHitSphere).length > 0;
+}
+let _foodHitSphere = null;
 
 function _getProxmoxDrillDownShot(selection) {
   const homelabPlanetPos = planet.position.clone();
@@ -892,6 +945,67 @@ function _exitProxmoxDrillDown() {
       nodes.setLabelFade(1);
       nodes.setInteractive(true);
       proxmoxDrillDown.deactivate();
+      _cameraMode = 'scroll';
+      _cameraTransition = null;
+      backBtn.textContent = 'Back to Orbit';
+      backBtn.setAttribute('aria-label', 'Exit Proxmox drill-down');
+    },
+  };
+}
+
+// ── Food drill-down ──────────────────────────────────────────────────────────
+
+function _enterFoodDrillDown() {
+  if (_cameraMode !== 'scroll') return;
+
+  closePanel();
+  htmlEl.classList.add('drilldown-active');
+  backBtn.textContent = 'Back to Orbit';
+  backBtn.setAttribute('aria-label', 'Exit Food planet');
+
+  // Fly camera to surface-level start position
+  const toPos    = new THREE.Vector3();
+  const toLook   = new THREE.Vector3();
+  foodDrillDown.activate(foodPlanet.position.clone());
+  foodDrillDown.computeCameraPosition(toPos);
+  foodDrillDown.computeLookAt(toLook);
+
+  _cameraMode = 'transition';
+  _cameraTransition = {
+    startedAt: clock.getElapsedTime(),
+    duration:  1.5,
+    fromCam:   camera.position.clone(),
+    fromLook:  _lookTarget.clone(),
+    toCam:     toPos,
+    toLook,
+    fromBlend: _drillDownBlend,
+    toBlend:   0,
+    isFoodDrillDown: true,
+    onComplete: () => {
+      _cameraMode = 'foodsurface';
+      _cameraTransition = null;
+    },
+  };
+}
+
+function _exitFoodDrillDown() {
+  if (_cameraMode !== 'foodsurface') return;
+
+  const targetPose = _getCameraPose(5);  // snap back to section 5 waypoint
+
+  _cameraMode = 'transition';
+  _cameraTransition = {
+    startedAt: clock.getElapsedTime(),
+    duration:  1.2,
+    fromCam:   camera.position.clone(),
+    fromLook:  _manualLookTarget.clone(),
+    toCam:     targetPose.cam,
+    toLook:    targetPose.look,
+    fromBlend: _drillDownBlend,
+    toBlend:   0,
+    onComplete: () => {
+      htmlEl.classList.remove('drilldown-active');
+      foodDrillDown.deactivate();
       _cameraMode = 'scroll';
       _cameraTransition = null;
       backBtn.textContent = 'Back to Orbit';
@@ -1025,6 +1139,16 @@ function animate() {
     proxmoxDrillDown.setBlend(0);
   } else if (_cameraMode === 'transition') {
     _updateCameraTransition(elapsed);
+  } else if (_cameraMode === 'foodsurface') {
+    const fp = new THREE.Vector3();
+    const fl = new THREE.Vector3();
+    foodDrillDown.computeCameraPosition(fp);
+    foodDrillDown.computeLookAt(fl);
+    camera.position.copy(fp);
+    _manualLookTarget.copy(fl);
+    camera.lookAt(_manualLookTarget);
+    camera.updateProjectionMatrix();
+    proxmoxDrillDown.setBlend(0);
   } else if (_cameraMode === 'commandring') {
     camera.position.set(0, 0, 0.12);
     _manualLookTarget.set(0, 0, -1);
@@ -1050,6 +1174,8 @@ function animate() {
   dockerPlanet.update(elapsed, delta);
   n8nPlanet.update(elapsed, delta);
   memoryPlanet.update(elapsed, delta);
+  foodPlanet.update(elapsed, delta);
+  foodDrillDown.update(elapsed, delta, camera);
   proxmoxDrillDown.update(elapsed, delta);
   commandRing.update(elapsed, delta);
 
@@ -1069,4 +1195,5 @@ startServicePolling();
 startDockerPolling();
 startN8nPolling();
 startMemoryPolling();
+startFoodPolling();
 animate();
